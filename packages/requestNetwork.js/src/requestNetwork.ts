@@ -1,13 +1,13 @@
-// Core
-import RequestCoreService from '../src/servicesCore/requestCore-service';
-
-// Contract
-import RequestEthereumService from '../src/servicesContracts/requestEthereum-service';
-
-// Synchrone Extension
-
 import Ipfs from './servicesExternal/ipfs-service';
 import { Web3Single } from './servicesExternal/web3-single';
+import RequestCoreService from '../src/servicesCore/requestCore-service';
+import RequestEthereumService from '../src/servicesContracts/requestEthereum-service';
+
+// RequestCore service containing methods for interacting with the Request Core
+let requestCoreService: RequestCoreService;
+
+// RequestEthereum service containing methods for interacting with the Ethereum currency contract
+let requestEthereumService: RequestEthereumService;
 
 /**
  * The RequestNetwork class is the single entry-point into the requestNetwork.js library.
@@ -15,16 +15,6 @@ import { Web3Single } from './servicesExternal/web3-single';
  * should be made through a RequestNetwork instance.
  */
 export class RequestNetwork {
-    /* 
-     * RequestEthereum service containing methods for interacting with the Ethereum currency contract
-     */
-    public requestEthereumService!: RequestEthereumService;
-
-    /* 
-     * RequestCore service containing methods for interacting with the Request Core
-     */
-    public requestCoreService!: RequestCoreService;
-
     /**
      * Constructor.
      * @param {object=} options
@@ -37,7 +27,8 @@ export class RequestNetwork {
     constructor({ provider, networkId, useIpfsPublic = true }: { provider?: any, networkId?: number, useIpfsPublic?: boolean }) {
         if (provider && ! networkId) {
             throw new Error('if you give provider you have to give the networkId too');
-        }
+       }
+        // TODO: Sanity checks
 
         // init web3 wrapper singleton
         Web3Single.init(provider, networkId);
@@ -45,19 +36,44 @@ export class RequestNetwork {
         // init ipfs wrapper singleton
         Ipfs.init(useIpfsPublic);
 
-        // init interface services
-        this.requestCoreService = new RequestCoreService();
-        this.requestEthereumService = new RequestEthereumService();
+        requestCoreService = new RequestCoreService();
+        requestEthereumService = new RequestEthereumService();
     }
 
     public Request = class Request {
         constructor(
             as: RequestNetwork.Role,
             currency: RequestNetwork.Currency,
-            payees: Array<object>,
-            payer: object
+            payees: Array<Payee>,
+            payer: Payer
         ) {
-            console.log(as);
+            // TODO: Sanity checks
+
+            if (as === RequestNetwork.Role.Payee && currency === RequestNetwork.Currency.Ethereum) {
+                return requestEthereumService.createRequestAsPayee(
+                    //_payeesIdAddress: string[],
+                    payees.map(payee => payee.idAddress),
+
+                    // _expectedAmounts: any[],
+                    payees.map(payee => payee.expectedAmount),
+
+                    // _payer: string,
+                    payer.idAddress,
+
+                    // _payeesPaymentAddress ?: Array<string|undefined>,
+                    payees.map(payee => payee.paymentAddress),
+
+                    // _payerRefundAddress ?: string,
+                    payer.refundAddress,
+
+                    // _data ?: string,
+                    // _extension ?: string,
+                    // _extensionParams ?: any[],
+                    // _options ?: any
+                );
+            }
+
+            throw new Error('Role-Currency Not implemented');
         }
     }
 }
