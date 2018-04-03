@@ -24,7 +24,7 @@
             "args": [
                 "--no-timeouts", 
                 "--require", "ts-node/register",
-                "${workspaceFolder}/packages/requestNetwork.js/test/**/*.ts",
+                "${workspaceFolder}/packages/requestNetwork.js/test/unit/requestNetowrk-test.ts",
                 "--colors"
             ],
             "cwd": "${workspaceFolder}/packages/requestNetwork.js",
