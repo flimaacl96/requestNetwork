@@ -2,6 +2,7 @@ import Ipfs from './servicesExternal/ipfs-service';
 import { Web3Single } from './servicesExternal/web3-single';
 import RequestCoreService from '../src/servicesCore/requestCore-service';
 import RequestEthereumService from '../src/servicesContracts/requestEthereum-service';
+const BN = require('bn.js');
 
 // RequestCore service containing methods for interacting with the Request Core
 let requestCoreService: RequestCoreService;
@@ -24,11 +25,10 @@ export class RequestNetwork {
      * @param {boolean=} options.useIpfsPublic - use public ipfs node if true, private one specified in “src/config.json ipfs.nodeUrlDefault.private” otherwise (default : true)
      * @return {object} An instance of the requestNetwork.js RequestNetwork class.
      */
-    constructor({ provider, networkId, useIpfsPublic = true }: { provider?: any, networkId?: number, useIpfsPublic?: boolean }) {
+    constructor({ provider, networkId, useIpfsPublic = true }: { provider?: any, networkId?: number, useIpfsPublic?: boolean } = {}) {
         if (provider && ! networkId) {
             throw new Error('if you give provider you have to give the networkId too');
-       }
-        // TODO: Sanity checks
+        }
 
         // init web3 wrapper singleton
         Web3Single.init(provider, networkId);
@@ -40,41 +40,55 @@ export class RequestNetwork {
         requestEthereumService = new RequestEthereumService();
     }
 
-    public Request = class Request {
-        constructor(
-            as: RequestNetwork.Role,
-            currency: RequestNetwork.Currency,
-            payees: Array<Payee>,
-            payer: Payer
-        ) {
-            // TODO: Sanity checks
+    // Async factory function
+    async createRequest(
+        as: RequestNetwork.Role,
+        currency: RequestNetwork.Currency,
+        payees: Array<Payee>,
+        payer: Payer
+    ): Promise<{request:Request, transaction:object}> {
+        if (as === RequestNetwork.Role.Payee && currency === RequestNetwork.Currency.Ethereum) {
+            const { request, transaction } = await requestEthereumService.createRequestAsPayee(
+                payees.map(payee => payee.idAddress),
+                payees.map(payee => payee.expectedAmount),
+                payer.idAddress,
+                payees.map(payee => payee.paymentAddress),
+                payer.refundAddress,
+                // _data ?: string,
+                // _extension ?: string,
+                // _extensionParams ?: any[],
+                // _options ?: any
+            );
 
-            if (as === RequestNetwork.Role.Payee && currency === RequestNetwork.Currency.Ethereum) {
-                return requestEthereumService.createRequestAsPayee(
-                    //_payeesIdAddress: string[],
-                    payees.map(payee => payee.idAddress),
-
-                    // _expectedAmounts: any[],
-                    payees.map(payee => payee.expectedAmount),
-
-                    // _payer: string,
-                    payer.idAddress,
-
-                    // _payeesPaymentAddress ?: Array<string|undefined>,
-                    payees.map(payee => payee.paymentAddress),
-
-                    // _payerRefundAddress ?: string,
-                    payer.refundAddress,
-
-                    // _data ?: string,
-                    // _extension ?: string,
-                    // _extensionParams ?: any[],
-                    // _options ?: any
-                );
-            }
-
-            throw new Error('Role-Currency Not implemented');
+            return {
+                transaction,
+                request: new Request(request.requestId, as, currency, payees, payer),
+            };
         }
+
+        throw new Error('Role-Currency Not implemented');
+    }
+}
+
+class Request {
+    public requestId: string
+    public creator: RequestNetwork.Role
+    public currency: RequestNetwork.Currency
+    public payees: Array<Payee>
+    public payer: Payer
+    
+    constructor(
+        requestId: string,
+        creator: RequestNetwork.Role,
+        currency: RequestNetwork.Currency,
+        payees: Array<Payee>,
+        payer: Payer,
+    ) {
+        this.requestId = requestId;
+        this.creator = creator;
+        this.currency = currency;
+        this.payees = payees;
+        this.payer = payer;
     }
 }
 
