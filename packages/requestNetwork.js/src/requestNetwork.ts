@@ -2,6 +2,7 @@ import Ipfs from './servicesExternal/ipfs-service';
 import { Web3Single } from './servicesExternal/web3-single';
 import RequestCoreService from '../src/servicesCore/requestCore-service';
 import RequestEthereumService from '../src/servicesContracts/requestEthereum-service';
+
 const BN = require('bn.js');
 
 // RequestCore service containing methods for interacting with the Request Core
@@ -54,10 +55,25 @@ export class RequestNetwork {
                 payer.idAddress,
                 payees.map(payee => payee.paymentAddress),
                 payer.refundAddress,
-                // _data ?: string,
-                // _extension ?: string,
-                // _extensionParams ?: any[],
-                // _options ?: any
+            );
+
+            return {
+                transaction,
+                request: new Request(request.requestId, as, currency, payees, payer),
+            };
+        }
+
+        if (as === RequestNetwork.Role.Payer && currency === RequestNetwork.Currency.Ethereum) {
+            const { request, transaction } = await requestEthereumService.createRequestAsPayer(
+                payees.map(payee => payee.idAddress),
+                payees.map(payee => payee.expectedAmount),
+                payer.refundAddress,
+                undefined, // _amountsToPay
+                undefined, // _additionals
+                undefined, // _data
+                undefined, // _extension
+                undefined, // _extensionParams
+                { from: payer.idAddress }
             );
 
             return {
@@ -90,6 +106,27 @@ class Request {
         this.payees = payees;
         this.payer = payer;
     }
+
+    async pay(
+        _amountsToPay: Array<number> = [],
+        _additionals: Array<number> = [],
+    ): Promise<{request:Request, transaction:object}> {
+        if (this.currency === RequestNetwork.Currency.Ethereum) {
+            const { request, transaction } = await requestEthereumService.paymentAction(
+                this.requestId,
+                _amountsToPay,
+                _additionals
+            );
+            this.payees = [request.payee, ...request.subPayees];
+
+            return {
+                transaction,
+                request: this,
+            };
+        }
+        
+        throw new Error('Currency Not implemented');
+    }
 }
 
 export namespace RequestNetwork {
@@ -107,7 +144,8 @@ export namespace RequestNetwork {
 interface Payee {
     idAddress: string,
     paymentAddress: string,
-    expectedAmount: number,
+    expectedAmount: number | any,
+    balance?: number | any,
 }
 
 interface Payer {
