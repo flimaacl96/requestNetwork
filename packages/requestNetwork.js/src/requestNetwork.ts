@@ -83,7 +83,7 @@ export class RequestNetwork {
 
         promise.then(({ request, transaction } : { request: any, transaction: object }) => {
             return promiEvent.resolve({
-                request: new Request(request.requestId, as, currency, payees, payer),
+                request: new Request(request.requestId, as, currency),
                 transaction,
             })
         });
@@ -98,21 +98,15 @@ export class Request {
     public requestId: string
     public creator: RequestNetwork.Role
     public currency: RequestNetwork.Currency
-    public payees: Array<Payee>
-    public payer: Payer
     
     constructor(
         requestId: string,
         creator: RequestNetwork.Role,
         currency: RequestNetwork.Currency,
-        payees: Array<Payee>,
-        payer: Payer,
     ) {
         this.requestId = requestId;
         this.creator = creator;
         this.currency = currency;
-        this.payees = payees;
-        this.payer = payer;
     }
 
     async pay(
@@ -125,7 +119,6 @@ export class Request {
                 _amountsToPay,
                 _additionals
             );
-            this.payees = [request.payee, ...request.subPayees];
 
             return {
                 transaction,
