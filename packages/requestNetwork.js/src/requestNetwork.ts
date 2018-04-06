@@ -4,6 +4,8 @@ import RequestCoreService from '../src/servicesCore/requestCore-service';
 import RequestEthereumService from '../src/servicesContracts/requestEthereum-service';
 
 const BN = require('bn.js');
+const Web3PromiEvent = require('web3-core-promievent');
+
 
 // RequestCore service containing methods for interacting with the Request Core
 let requestCoreService: RequestCoreService;
@@ -42,29 +44,27 @@ export class RequestNetwork {
     }
 
     // Async factory function
-    async createRequest(
+    createRequest(
         as: RequestNetwork.Role,
         currency: RequestNetwork.Currency,
         payees: Array<Payee>,
         payer: Payer
-    ): Promise<{request:Request, transaction:object}> {
+    ): typeof Web3PromiEvent {
+        const promiEvent = Web3PromiEvent();
+        let promise;
+
         if (as === RequestNetwork.Role.Payee && currency === RequestNetwork.Currency.Ethereum) {
-            const { request, transaction } = await requestEthereumService.createRequestAsPayee(
+            promise = requestEthereumService.createRequestAsPayee(
                 payees.map(payee => payee.idAddress),
                 payees.map(payee => payee.expectedAmount),
                 payer.idAddress,
                 payees.map(payee => payee.paymentAddress),
                 payer.refundAddress,
             );
-
-            return {
-                transaction,
-                request: new Request(request.requestId, as, currency, payees, payer),
-            };
         }
 
         if (as === RequestNetwork.Role.Payer && currency === RequestNetwork.Currency.Ethereum) {
-            const { request, transaction } = await requestEthereumService.createRequestAsPayer(
+            promise = requestEthereumService.createRequestAsPayer(
                 payees.map(payee => payee.idAddress),
                 payees.map(payee => payee.expectedAmount),
                 payer.refundAddress,
@@ -75,18 +75,26 @@ export class RequestNetwork {
                 undefined, // _extensionParams
                 { from: payer.idAddress }
             );
-
-            return {
-                transaction,
-                request: new Request(request.requestId, as, currency, payees, payer),
-            };
         }
 
-        throw new Error('Role-Currency Not implemented');
+        if (!promise) {
+            throw new Error('Role-Currency Not implemented');
+        }
+
+        promise.then(({ request, transaction } : { request: any, transaction: object }) => {
+            return promiEvent.resolve({
+                request: new Request(request.requestId, as, currency, payees, payer),
+                transaction,
+            })
+        });
+
+        promise.on('broadcasted', (param: any) => promiEvent.eventEmitter.emit('broadcasted', param));
+
+        return promiEvent.eventEmitter;
     }
 }
 
-class Request {
+export class Request {
     public requestId: string
     public creator: RequestNetwork.Role
     public currency: RequestNetwork.Currency
@@ -110,7 +118,7 @@ class Request {
     async pay(
         _amountsToPay: Array<number> = [],
         _additionals: Array<number> = [],
-    ): Promise<{request:Request, transaction:object}> {
+    ): Promise<{ request: Request, transaction: object }> {
         if (this.currency === RequestNetwork.Currency.Ethereum) {
             const { request, transaction } = await requestEthereumService.paymentAction(
                 this.requestId,

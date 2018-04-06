@@ -1,6 +1,12 @@
-import { RequestNetwork } from '../../src/requestNetwork';
-import {expect} from 'chai';
+import { RequestNetwork, Request } from '../../src/requestNetwork';
 const Web3 = require('web3');
+
+const chai = require('chai');
+const spies = require('chai-spies');
+chai.use(spies);
+const should = chai.should()
+const expect = chai.expect;
+
 
 // Same function to test creation as payer and payee to ensure consistent API
 async function testCreation(role: RequestNetwork.Role) {
@@ -76,5 +82,39 @@ describe('Request Network API', () => {
 
         expect(request.payees[0].expectedAmount.toNumber()).to.equal(100);
         expect(request.payees[0].balance.toNumber()).to.equal(1);
+    });
+    
+    it('sends broadcasted event', async () => {
+        const web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:8545'));
+        const accounts = await web3.eth.getAccounts();
+
+        const requestNetwork = new RequestNetwork({
+            provider: 'http://localhost:8545',
+            networkId: 10000000000
+        });
+
+        const broadcastedSpy = chai.spy();
+        const notCalledSpy = chai.spy();
+
+        const { request } = await requestNetwork.createRequest(
+            RequestNetwork.Role.Payee,
+            RequestNetwork.Currency.Ethereum,
+            [{
+                idAddress: accounts[0],
+                paymentAddress: accounts[0],
+                expectedAmount: 100,
+            }],
+            {
+                idAddress: accounts[1],
+                refundAddress: accounts[1],
+            }
+        )
+            .on('broadcasted', broadcastedSpy)
+            .on('event-that-doesnt-exist', notCalledSpy);
+
+        expect(request).to.be.an.instanceof(Request)
+        expect(broadcastedSpy).to.have.been.called();
+        expect(notCalledSpy).to.have.been.called.below(1);
+
     });
 });
