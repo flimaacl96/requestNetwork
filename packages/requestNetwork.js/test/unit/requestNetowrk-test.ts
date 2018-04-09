@@ -70,10 +70,6 @@ describe('Request Network API', () => {
         expect(request.requestId).to.exist;
         expect(request.creator).to.equal(role);
         expect(request.currency).to.equal(RequestNetwork.Currency.Ethereum);
-        // expect(request.payees.length).to.equal(1);
-        // expect(request.payees[0].idAddress).to.equal(accounts[0]);
-        // expect(request.payees[0].expectedAmount).to.equal(100);
-        // expect(request.payer.idAddress).to.equal(accounts[1]);
     });
 
     it('allows to pay an ETH request', async () => {
@@ -85,9 +81,6 @@ describe('Request Network API', () => {
         )
 
         await request.pay([1]);
-
-        // expect(request.payees[0].expectedAmount.toNumber()).to.equal(100);
-        // expect(request.payees[0].balance.toNumber()).to.equal(1);
     });
     
     it('sends broadcasted event', async () => {
@@ -106,6 +99,22 @@ describe('Request Network API', () => {
         expect(request).to.be.an.instanceof(Request)
         expect(broadcastedSpy).to.have.been.called();
         expect(notCalledSpy).to.have.been.called.below(1);
+    });
+    
+    it.only('gets request from its ID', async () => {
+        const { request: request1 } = await requestNetwork.createRequest(
+            RequestNetwork.Role.Payee,
+            RequestNetwork.Currency.Ethereum,
+            examplePayees,
+            examplePayer
+        );
 
+        const request2 = await requestNetwork.fromRequestId(request1.requestId);
+
+        // Same ID
+        expect(request1.requestId).to.equal(request1.requestId);
+
+        // Different obejct referrences
+        expect(request1).to.not.equal(request2);
     });
 });

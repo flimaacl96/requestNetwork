@@ -2,6 +2,7 @@ import Ipfs from './servicesExternal/ipfs-service';
 import { Web3Single } from './servicesExternal/web3-single';
 import RequestCoreService from '../src/servicesCore/requestCore-service';
 import RequestEthereumService from '../src/servicesContracts/requestEthereum-service';
+import currencyContracts from './currencyContracts';
 
 const BN = require('bn.js');
 const Web3PromiEvent = require('web3-core-promievent');
@@ -92,16 +93,22 @@ export class RequestNetwork {
 
         return promiEvent.eventEmitter;
     }
+
+    async fromRequestId(requestId: string) {
+        const requestData = await requestCoreService.getRequest(requestId);
+        const currency: RequestNetwork.Currency = currencyContracts.currencyFromContractAddress(requestData.currencyContract.address);
+        return new Request(requestId, null, currency);
+    }
 }
 
 export class Request {
     public requestId: string
-    public creator: RequestNetwork.Role
+    public creator: RequestNetwork.Role|null
     public currency: RequestNetwork.Currency
     
     constructor(
         requestId: string,
-        creator: RequestNetwork.Role,
+        creator: RequestNetwork.Role|null,
         currency: RequestNetwork.Currency,
     ) {
         this.requestId = requestId;
@@ -128,15 +135,19 @@ export class Request {
         
         throw new Error('Currency Not implemented');
     }
+
+    getData() {
+        return requestCoreService.getRequest(this.requestId);
+    }
 }
 
-export namespace RequestNetwork {
-    export enum Role {
+export declare namespace RequestNetwork {
+    enum Role {
         Payer,
         Payee,
     }
 
-    export enum Currency {
+    enum Currency {
         Ethereum,
         ERC20,
     }
@@ -152,4 +163,10 @@ interface Payee {
 interface Payer {
     idAddress: string,
     refundAddress: string,
+}
+
+export default class RequestNetworkLegacy {
+    constructor(provider?: any, networkId?: number, useIpfsPublic: boolean = true) {
+        throw new Error('Deprecated');
+    }
 }
