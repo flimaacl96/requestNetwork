@@ -103,7 +103,7 @@ export class RequestNetwork {
 
 export class Request {
     public requestId: string
-    public creator: RequestNetwork.Role|null
+    public creator: RequestNetwork.Role|null // Remove?
     public currency: RequestNetwork.Currency
     
     constructor(
@@ -136,20 +136,26 @@ export class Request {
         throw new Error('Currency Not implemented');
     }
 
-    getData() {
+    async getData() : Promise<RequestData> {
         return requestCoreService.getRequest(this.requestId);
     }
 }
 
-export declare namespace RequestNetwork {
-    enum Role {
+export namespace RequestNetwork {
+    export enum Role {
         Payer,
         Payee,
     }
 
-    enum Currency {
+    export enum Currency {
         Ethereum,
         ERC20,
+    }
+
+    export enum State {
+        Created,
+        Accepted, 
+        Canceled
     }
 }
 
@@ -163,6 +169,17 @@ interface Payee {
 interface Payer {
     idAddress: string,
     refundAddress: string,
+}
+
+interface RequestData {
+    creator: RequestNetwork.Role,
+    currencyContract: object,
+    data: any,
+    payee: RequestNetwork.Role,
+    payer: RequestNetwork.Role,
+    requestId: string,
+    state: RequestNetwork.State,
+    subPayees: Array<Payee>
 }
 
 export default class RequestNetworkLegacy {

@@ -101,7 +101,7 @@ describe('Request Network API', () => {
         expect(notCalledSpy).to.have.been.called.below(1);
     });
     
-    it.only('gets request from its ID', async () => {
+    it('gets request from its ID', async () => {
         const { request: request1 } = await requestNetwork.createRequest(
             RequestNetwork.Role.Payee,
             RequestNetwork.Currency.Ethereum,
@@ -116,5 +116,19 @@ describe('Request Network API', () => {
 
         // Different obejct referrences
         expect(request1).to.not.equal(request2);
+    });
+    
+    it('gets data of a request', async () => {
+        const { request } = await requestNetwork.createRequest(
+            RequestNetwork.Role.Payee,
+            RequestNetwork.Currency.Ethereum,
+            examplePayees,
+            examplePayer
+        );
+
+        const data = await request.getData();
+
+        expect(data.creator).to.be.equal(examplePayees[0].idAddress);
+        expect(data.requestId).to.be.equal(request.requestId);
     });
 });
