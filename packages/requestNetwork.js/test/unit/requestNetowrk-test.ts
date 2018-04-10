@@ -51,10 +51,6 @@ describe('Request Network API', () => {
         
         expect(request.requestId).to.exist;
         expect(request.currency).to.equal(RequestNetwork.Currency.Ethereum);
-        // expect(request.payees.length).to.equal(1);
-        // expect(request.payees[0].idAddress).to.equal(accounts[0]);
-        // expect(request.payees[0].expectedAmount).to.equal(100);
-        // expect(request.payer.idAddress).to.equal(accounts[1]);
     });
 
     it('creates a ETH request from payer', async () => {
@@ -79,6 +75,39 @@ describe('Request Network API', () => {
         )
 
         await request.pay([1]);
+
+        const data = await request.getData();
+        expect(data.payee.balance.toNumber()).to.equal(1);
+    });
+
+    it('allows to cancel an ETH request', async () => {
+        const { request } = await requestNetwork.createRequest(
+            RequestNetwork.Role.Payee,
+            RequestNetwork.Currency.Ethereum,
+            examplePayees,
+            examplePayer
+        )
+
+        await request.cancel();
+
+        const data = await request.getData();
+        expect(data.state).to.equal(RequestNetwork.State.Canceled);
+    });
+
+    it.only('allows to refund an ETH request', async () => {
+        const { request } = await requestNetwork.createRequest(
+            RequestNetwork.Role.Payee,
+            RequestNetwork.Currency.Ethereum,
+            examplePayees,
+            examplePayer
+        )
+
+        await request.pay([1]);
+        await request.refund(0.1);
+
+        const data = await request.getData();
+        expect(data.payee.balance.toNumber()).to.equal(0.9);
+        // Not working. Because of from?
     });
     
     it('sends broadcasted event', async () => {

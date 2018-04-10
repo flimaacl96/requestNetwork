@@ -14,6 +14,21 @@ let requestCoreService: RequestCoreService;
 // RequestEthereum service containing methods for interacting with the Ethereum currency contract
 let requestEthereumService: RequestEthereumService;
 
+function promiEventLibraryWrap(request: Request, callback: Function, events: string[] = ['broadcasted']) : typeof Web3PromiEvent {
+    const promiEvent = Web3PromiEvent();
+    let promise = callback();
+
+    promise.then(({ transaction } : { transaction: object }) => 
+        promiEvent.resolve({ request, transaction })
+    );
+
+    events.forEach(eventName =>
+        promise.on(eventName, (param: any) => promiEvent.eventEmitter.emit(eventName, param))
+    );
+
+    return promiEvent.eventEmitter;
+}
+
 /**
  * The RequestNetwork class is the single entry-point into the requestNetwork.js library.
  * It contains all of the library's functionality and all calls to the library 
@@ -104,7 +119,6 @@ export class RequestNetwork {
         as: RequestNetwork.Role,
         currency: RequestNetwork.Currency,
         payees: Payee[],
-        // payer: Payer
         expirationDate: number
     ): Promise<SignedRequest> {
         let signedRequestData = null;
@@ -158,37 +172,47 @@ export class RequestNetwork {
 export class Request {
     public requestId: string
     public currency: RequestNetwork.Currency
+
     
     constructor(requestId: string, currency: RequestNetwork.Currency) {
         this.requestId = requestId;
         this.currency = currency;
     }
 
-    async pay(
-        _amountsToPay: number[] = [],
-        _additionals: number[] = [],
-    ): Promise<{ request: Request, transaction: object }> {
-        if (this.currency === RequestNetwork.Currency.Ethereum) {
-            // TODO use currency
-            const { request, transaction } = await requestEthereumService.paymentAction(
+    pay(amountsToPay: number[] = [], additionals: number[] = []): typeof Web3PromiEvent {
+        return promiEventLibraryWrap(this, () => 
+            requestEthereumService.paymentAction(
                 this.requestId,
-                _amountsToPay,
-                _additionals
-            );
-
-            return {
-                transaction,
-                request: this,
-            };
-        }
-        
-        throw new Error('Currency Not implemented');
+                amountsToPay,
+                additionals
+            )
+        )
     }
+
+    public cancel() : typeof Web3PromiEvent {
+        return promiEventLibraryWrap(this, () => 
+            requestEthereumService.cancel(this.requestId)
+        )
+    }
+
+    public refund(amountToRefund: number) : typeof Web3PromiEvent {
+        return promiEventLibraryWrap(this, () => 
+            requestEthereumService.refundAction(this.requestId, amountToRefund)
+        )
+    }
+
+    // public subtractAction(subtracts) : typeof Web3PromiEvent {
+    //     subtractAction(this.requestId, subtracts)
+    // }
+    // public additionalAction(additionals) : typeof Web3PromiEvent {
+    //     additionalAction(this.requestId, additionals)
+    // }
 
     async getData() : Promise<RequestData> {
         return requestCoreService.getRequest(this.requestId);
-    }
-}
+    }    
+}    
+
 
 export class SignedRequest{
     public signedRequestData: SignedRequestData
@@ -199,14 +223,14 @@ export class SignedRequest{
             signedRequest;
     }
     
-    getInvalidErrorMessage(payer: Payer): string {
+    public getInvalidErrorMessage(payer: Payer): string {
         if (payer.refundAddress && payer.idAddress !== payer.refundAddress) {
             throw new Error('Different idAddress and paymentAddress for Payer of signed request not yet supported');
         }
 
         return requestEthereumService.isSignedRequestHasError(this.signedRequestData, payer.idAddress);
     }
-    
+
     isValid(payer: Payer): boolean {
         return this.getInvalidErrorMessage(payer) === '';
     }
