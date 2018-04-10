@@ -1,4 +1,4 @@
-import { RequestNetwork, Request } from '../../src/requestNetwork';
+import { RequestNetwork, Request, SignedRequest } from '../../src/requestNetwork';
 const Web3 = require('web3');
 
 const chai = require('chai');
@@ -50,7 +50,6 @@ describe('Request Network API', () => {
         )
         
         expect(request.requestId).to.exist;
-        expect(request.creator).to.equal(role);
         expect(request.currency).to.equal(RequestNetwork.Currency.Ethereum);
         // expect(request.payees.length).to.equal(1);
         // expect(request.payees[0].idAddress).to.equal(accounts[0]);
@@ -59,7 +58,7 @@ describe('Request Network API', () => {
     });
 
     it('creates a ETH request from payer', async () => {
-        const role = RequestNetwork.Role.Payee;
+        const role = RequestNetwork.Role.Payer;
         const { request } = await requestNetwork.createRequest(
             role,
             RequestNetwork.Currency.Ethereum,
@@ -68,7 +67,6 @@ describe('Request Network API', () => {
         )
         
         expect(request.requestId).to.exist;
-        expect(request.creator).to.equal(role);
         expect(request.currency).to.equal(RequestNetwork.Currency.Ethereum);
     });
 
@@ -130,5 +128,81 @@ describe('Request Network API', () => {
 
         expect(data.creator).to.be.equal(examplePayees[0].idAddress);
         expect(data.requestId).to.be.equal(request.requestId);
+    });
+
+    it('creates a signed request', async () => {
+        const signedRequest = await requestNetwork.createSignedRequest(
+            RequestNetwork.Role.Payee,
+            RequestNetwork.Currency.Ethereum,
+            examplePayees,
+            Date.now() + 3600*1000
+        );
+
+        expect(signedRequest).to.be.instanceof(SignedRequest);
+        expect(signedRequest.signedRequestData.signature).to.exist;
+    });
+
+    it('checks validity of a signed request', async () => {
+        const signedRequest = await requestNetwork.createSignedRequest(
+            RequestNetwork.Role.Payee,
+            RequestNetwork.Currency.Ethereum,
+            examplePayees,
+            Date.now() + 3600*1000
+        );
+
+        expect(signedRequest.isValid(examplePayer)).to.be.true;
+        
+        // Change the hash to make the signed request invalid
+        signedRequest.signedRequestData.hash = 'someinvalidhash';
+        expect(signedRequest.isValid(examplePayer)).to.be.false;
+        expect(signedRequest.getInvalidErrorMessage(examplePayer)).to.be.equal('hash is not valid');
+    });
+
+    it('broadcasts a signed request', async () => {
+        const signedRequest = await requestNetwork.createSignedRequest(
+            RequestNetwork.Role.Payee,
+            RequestNetwork.Currency.Ethereum,
+            examplePayees,
+            Date.now() + 3600*1000
+        );
+
+        const { request } = await requestNetwork.broadcastSignedRequest(signedRequest, examplePayer);
+
+        expect(request.requestId).to.exist;
+        expect(request.currency).to.equal(RequestNetwork.Currency.Ethereum);
+    });
+
+    it('send broadcast event when broadcasting a signed request', async () => {
+        const broadcastedSpy = chai.spy();
+        const notCalledSpy = chai.spy();
+
+        const signedRequest = await requestNetwork.createSignedRequest(
+            RequestNetwork.Role.Payee,
+            RequestNetwork.Currency.Ethereum,
+            examplePayees,
+            Date.now() + 3600*1000
+        );
+
+        const { request } = await requestNetwork.broadcastSignedRequest(signedRequest, examplePayer)
+            .on('broadcasted', broadcastedSpy)
+            .on('event-that-doesnt-exist', notCalledSpy);
+
+        expect(request).to.be.an.instanceof(Request)
+        expect(broadcastedSpy).to.have.been.called();
+        expect(notCalledSpy).to.have.been.called.below(1);
+    });
+
+    it('can serialize and deserialize signed request', async () => {
+        const signedRequest = await requestNetwork.createSignedRequest(
+            RequestNetwork.Role.Payee,
+            RequestNetwork.Currency.Ethereum,
+            examplePayees,
+            Date.now() + 3600*1000
+        );
+
+        const serialized = signedRequest.serializeForUri();
+        const deserialized = new SignedRequest(serialized);
+
+        expect(deserialized.signedRequestData.signature).to.equal(signedRequest.signedRequestData.signature);
     });
 });

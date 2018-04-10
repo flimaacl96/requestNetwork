@@ -48,7 +48,7 @@ export class RequestNetwork {
     createRequest(
         as: RequestNetwork.Role,
         currency: RequestNetwork.Currency,
-        payees: Array<Payee>,
+        payees: Payee[],
         payer: Payer
     ): typeof Web3PromiEvent {
         const promiEvent = Web3PromiEvent();
@@ -69,7 +69,7 @@ export class RequestNetwork {
                 payees.map(payee => payee.idAddress),
                 payees.map(payee => payee.expectedAmount),
                 payer.refundAddress,
-                undefined, // _amountsToPay
+                undefined, // TODO: _amountsToPay - amount paid with the creation
                 undefined, // _additionals
                 undefined, // _data
                 undefined, // _extension
@@ -86,7 +86,7 @@ export class RequestNetwork {
             return promiEvent.resolve({
                 request: new Request(request.requestId, currency),
                 transaction,
-            })
+            });
         });
 
         promise.on('broadcasted', (param: any) => promiEvent.eventEmitter.emit('broadcasted', param));
@@ -98,6 +98,60 @@ export class RequestNetwork {
         const requestData = await requestCoreService.getRequest(requestId);
         const currency: RequestNetwork.Currency = currencyContracts.currencyFromContractAddress(requestData.currencyContract.address);
         return new Request(requestId, currency);
+    }
+    
+    async createSignedRequest(
+        as: RequestNetwork.Role,
+        currency: RequestNetwork.Currency,
+        payees: Payee[],
+        // payer: Payer
+        expirationDate: number
+    ): Promise<SignedRequest> {
+        let signedRequestData = null;
+        
+        if (as === RequestNetwork.Role.Payee && currency === RequestNetwork.Currency.Ethereum) {
+            signedRequestData = await requestEthereumService.signRequestAsPayee(
+                payees.map(payee => payee.idAddress),
+                payees.map(payee => payee.expectedAmount),
+                expirationDate,
+                payees.map(payee => payee.paymentAddress)
+            );
+        }
+
+        if (!signedRequestData) {
+            throw new Error('Role-Currency Not implemented');
+        }
+
+        return new SignedRequest(signedRequestData);
+    }
+
+    broadcastSignedRequest(signedRequest: SignedRequest, payer: Payer): typeof Web3PromiEvent {
+        if (payer.refundAddress && payer.idAddress !== payer.refundAddress) {
+            throw new Error('Different idAddress and paymentAddress for Payer of signed request not yet supported');
+        }
+
+        const currency: RequestNetwork.Currency = currencyContracts.currencyFromContractAddress(
+            signedRequest.signedRequestData.currencyContract
+        );
+
+        const promiEvent = Web3PromiEvent();
+        let promise = requestEthereumService.broadcastSignedRequestAsPayer(
+            signedRequest.signedRequestData,
+            [], // _amountsToPay
+            undefined, // _additionals
+            { from: payer.idAddress }
+        );
+
+        promise.then(({ request, transaction } : { request: any, transaction: object }) => {
+            return promiEvent.resolve({
+                request: new Request(request.requestId, currency),
+                transaction,
+            });
+        });
+
+        promise.on('broadcasted', (param: any) => promiEvent.eventEmitter.emit('broadcasted', param));
+
+        return promiEvent.eventEmitter;
     }
 }
 
@@ -111,10 +165,11 @@ export class Request {
     }
 
     async pay(
-        _amountsToPay: Array<number> = [],
-        _additionals: Array<number> = [],
+        _amountsToPay: number[] = [],
+        _additionals: number[] = [],
     ): Promise<{ request: Request, transaction: object }> {
         if (this.currency === RequestNetwork.Currency.Ethereum) {
+            // TODO use currency
             const { request, transaction } = await requestEthereumService.paymentAction(
                 this.requestId,
                 _amountsToPay,
@@ -132,6 +187,36 @@ export class Request {
 
     async getData() : Promise<RequestData> {
         return requestCoreService.getRequest(this.requestId);
+    }
+}
+
+export class SignedRequest{
+    public signedRequestData: SignedRequestData
+    
+    constructor(signedRequest: SignedRequestData|string) {
+        this.signedRequestData = typeof signedRequest === 'string' ? 
+            this.deserializeForUri(signedRequest) :
+            signedRequest;
+    }
+    
+    getInvalidErrorMessage(payer: Payer): string {
+        if (payer.refundAddress && payer.idAddress !== payer.refundAddress) {
+            throw new Error('Different idAddress and paymentAddress for Payer of signed request not yet supported');
+        }
+
+        return requestEthereumService.isSignedRequestHasError(this.signedRequestData, payer.idAddress);
+    }
+    
+    isValid(payer: Payer): boolean {
+        return this.getInvalidErrorMessage(payer) === '';
+    }
+
+    serializeForUri(): string {
+        return JSON.stringify(this.signedRequestData);
+    }
+    
+    private deserializeForUri(serializedRequest: string): SignedRequestData {
+        return JSON.parse(serializedRequest);
     }
 }
 
@@ -162,7 +247,7 @@ interface Payee {
 
 interface Payer {
     idAddress: string,
-    refundAddress: string,
+    refundAddress?: string,
 }
 
 interface RequestData {
@@ -173,7 +258,20 @@ interface RequestData {
     payer: RequestNetwork.Role,
     requestId: string,
     state: RequestNetwork.State,
-    subPayees: Array<Payee>
+    subPayees: Payee[]
+}
+
+interface SignedRequestData {
+    currencyContract: string,
+    data: string,
+    expectedAmounts: number[],
+    expirationDate: number,
+    extension: string,
+    extensionParams: any[],
+    hash: string,
+    payeesIdAddress: string,
+    payeesPaymentAddress: string[],
+    signature: string,
 }
 
 export default class RequestNetworkLegacy {

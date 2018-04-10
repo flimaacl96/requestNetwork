@@ -79,21 +79,30 @@ const request = requestNetwork.createRequest(
 new requestNetwork.Request(requestId)
 ```
 
-#### Sign Request
+#### Signed Request
+##### Sign Request
 ```javascript
-request.sign()
+const signedRequest = requestNetwork.createSignedRequest(); // => SignedRequest
 ```
 
-#### Broadcast a signed transaction
+##### Serialize Signed Request
 ```javascript
-request.broadcast()
+const serializedSignedRequest = signedRequest.URIserialize(); // => SignedRequest
 ```
 
-#### Check a signed request
+##### Deserialize Signed Request
 ```javascript
-request.isSigned && request.isSignatureValid()
-// Or
-RequestNetowk.isSignatureValid()
+const signedRequest = new SignedRequest(serializedSignedRequest); // => SignedRequest
+```
+
+##### Broadcast a signed transaction
+```javascript
+const request = requestNetwork.broadcastSignedRequest(); // => Request
+```
+
+##### Check a signed request
+```javascript
+signedRequest.isSignatureValid()
 ```
 
 #### Cancel, pay, refund, add substract/additional, etc
