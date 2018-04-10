@@ -84,7 +84,7 @@ export class RequestNetwork {
 
         promise.then(({ request, transaction } : { request: any, transaction: object }) => {
             return promiEvent.resolve({
-                request: new Request(request.requestId, as, currency),
+                request: new Request(request.requestId, currency),
                 transaction,
             })
         });
@@ -97,22 +97,16 @@ export class RequestNetwork {
     async fromRequestId(requestId: string) {
         const requestData = await requestCoreService.getRequest(requestId);
         const currency: RequestNetwork.Currency = currencyContracts.currencyFromContractAddress(requestData.currencyContract.address);
-        return new Request(requestId, null, currency);
+        return new Request(requestId, currency);
     }
 }
 
 export class Request {
     public requestId: string
-    public creator: RequestNetwork.Role|null // Remove?
     public currency: RequestNetwork.Currency
     
-    constructor(
-        requestId: string,
-        creator: RequestNetwork.Role|null,
-        currency: RequestNetwork.Currency,
-    ) {
+    constructor(requestId: string, currency: RequestNetwork.Currency) {
         this.requestId = requestId;
-        this.creator = creator;
         this.currency = currency;
     }
 
