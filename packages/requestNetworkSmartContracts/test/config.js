@@ -7,8 +7,11 @@ var config = {
 		"requestCoreAcceptCancel.js":false,
 		"requestCoreUpdateExpectedAmount.js":false,
 		"requestCoreUpdateBalance.js":false,
+		"CentralBank-test.js":false,
+		"SafeMathInt-test.js":false,
+		"burner-test.js":false,
 	// },
-	// "synchrone.js": {
+	// "synchrone": {
 	//	 	"ethereum.js": {
 				"requestEthereumCreateRequestAsPayee.js":false,
 				"requestEthereumCreateRequestAsPayer.js":false,
@@ -34,5 +37,8 @@ var config = {
 				"requestERC20RefundAction.js":false,
 	//		}
 	// },
+	// "asynchrone": {
+	//	 	"requestBitcoinOffline.js": {
+				"requestBitcoinOfflineCreateRequestAsPayee.js":false,
 };
 module.exports = config;

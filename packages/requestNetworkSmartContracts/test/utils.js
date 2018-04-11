@@ -1,4 +1,6 @@
 const abiUtils = require('web3-eth-abi');
+var ethABI = require("../lib/ethereumjs-abi-perso.js"); 
+var ethUtil = require("ethereumjs-util");
 
 // Builds the requestId from Core address and request number
 exports.getRequestId = function(addressCore, numRequest) {
@@ -55,4 +57,25 @@ exports.getEventFromReceipt = function(log, abi) {
 
 exports.bytes32StrToAddressStr = function(bytes32) {
   return bytes32.replace('0x000000000000000000000000','0x');
+}
+
+
+exports.createBytesForPaymentBitcoinAddress = function(_payeesPaymentAddress) {
+    const requestParts = [];
+
+    for (const k in _payeesPaymentAddress) {
+        if (_payeesPaymentAddress.hasOwnProperty(k)) {
+            requestParts.push({value: _payeesPaymentAddress[k].length, type: 'uint8'});
+            requestParts.push({value: _payeesPaymentAddress[k], type: 'string'});
+        }
+    }
+
+    const types = [];
+    const values = [];
+    requestParts.forEach((o) => {
+        types.push(o.type);
+        values.push(o.value);
+    });
+
+    return ethUtil.bufferToHex(ethABI.solidityPack(types, values));
 }

@@ -1,4 +1,7 @@
-const utils = require("../../utils.js");
+var config = require("../../config.js"); var utils = require("../../utils.js");
+if(!config['all'] && !config[__filename.split('\\').slice(-1)[0]]) {
+  return;
+}
 
 const CentralBankContract = artifacts.require("./base/token/CentralBank");
 
@@ -38,13 +41,13 @@ contract('central bank contract ', accounts => {
     assert.equal((await centralBankInstance.balanceOf(account1)).toNumber(), 300);
   });
 
-  it("mints maximum 1000 tokens at once", async () => {
+  it("mints maximum 10e21 tokens at once", async () => {
     const centralBankInstance = await CentralBankContract.new();
     assert.equal(await centralBankInstance.totalSupply(), 0);
     
-    await centralBankInstance.mint(1001);
+    await centralBankInstance.mint(10e21);
     
-    assert.equal((await centralBankInstance.totalSupply()).toNumber(), 1000);
+    assert.equal((await centralBankInstance.totalSupply()).toNumber(), 10e21);
   });
 
   it("permits transfers", async () => {
