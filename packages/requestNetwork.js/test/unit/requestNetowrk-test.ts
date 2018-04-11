@@ -94,7 +94,7 @@ describe('Request Network API', () => {
         expect(data.state).to.equal(RequestNetwork.State.Canceled);
     });
 
-    it.only('allows to refund an ETH request', async () => {
+    it('allows to refund an ETH request', async () => {
         const { request } = await requestNetwork.createRequest(
             RequestNetwork.Role.Payee,
             RequestNetwork.Currency.Ethereum,
@@ -102,12 +102,11 @@ describe('Request Network API', () => {
             examplePayer
         )
 
-        await request.pay([1]);
-        await request.refund(0.1);
+        await request.pay([10]);
+        await request.refund(1);
 
         const data = await request.getData();
-        expect(data.payee.balance.toNumber()).to.equal(0.9);
-        // Not working. Because of from?
+        expect(data.payee.balance.toNumber()).to.equal(9);
     });
     
     it('sends broadcasted event', async () => {
@@ -234,4 +233,20 @@ describe('Request Network API', () => {
 
         expect(deserialized.signedRequestData.signature).to.equal(signedRequest.signedRequestData.signature);
     });
+
+    it('can get events', async () => {
+        const { request } = await requestNetwork.createRequest(
+            RequestNetwork.Role.Payer,
+            RequestNetwork.Currency.Ethereum,
+            examplePayees,
+            examplePayer
+        );
+
+        const events = await request.getEvents();
+
+        expect(events[0].name).to.equal('Created');
+        expect(events[0].data.payee).to.equal(examplePayees[0].idAddress);
+    });
+
+
 });

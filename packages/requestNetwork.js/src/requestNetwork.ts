@@ -173,7 +173,6 @@ export class Request {
     public requestId: string
     public currency: RequestNetwork.Currency
 
-    
     constructor(requestId: string, currency: RequestNetwork.Currency) {
         this.requestId = requestId;
         this.currency = currency;
@@ -210,6 +209,10 @@ export class Request {
 
     async getData() : Promise<RequestData> {
         return requestCoreService.getRequest(this.requestId);
+    }    
+
+    getEvents(fromBlock?: number, toBlock?: number) : Promise<Event[]> {
+        return requestCoreService.getRequestEvents(this.requestId, fromBlock, toBlock)
     }    
 }    
 
@@ -278,8 +281,8 @@ interface RequestData {
     creator: RequestNetwork.Role,
     currencyContract: object,
     data: any,
-    payee: RequestNetwork.Role,
-    payer: RequestNetwork.Role,
+    payee: Payee,
+    payer: Payer,
     requestId: string,
     state: RequestNetwork.State,
     subPayees: Payee[]
@@ -296,6 +299,12 @@ interface SignedRequestData {
     payeesIdAddress: string,
     payeesPaymentAddress: string[],
     signature: string,
+}
+
+interface Event {
+    _meta: { blockNumber: number, logIndex: number, timestamp: number },
+    data: any,
+    name: string,
 }
 
 export default class RequestNetworkLegacy {
