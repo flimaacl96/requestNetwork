@@ -19,7 +19,7 @@ function serviceForCurrency(currency: RequestNetwork.Currency) {
     }[currency];
 }
 
-function promiEventLibraryWrap(request: Request, callback: Function, events: string[] = ['broadcasted']) : typeof Web3PromiEvent {
+function promiEventLibraryWrap(request: RequestNetwork.Request, callback: Function, events: string[] = ['broadcasted']) : typeof Web3PromiEvent {
     const promiEvent = Web3PromiEvent();
     let promise = callback();
 
@@ -39,7 +39,17 @@ function promiEventLibraryWrap(request: Request, callback: Function, events: str
  * It contains all of the library's functionality and all calls to the library 
  * should be made through a RequestNetwork instance.
  */
-export class RequestNetwork {
+class RequestNetwork {
+    /**
+     * requestCoreService instance to interact directly with the core of the library.
+     */
+    public requestCoreService: RequestCoreService;
+
+    /**
+     * requestEthereumService instance to interact directly with the core of the library.
+     */
+    public requestEthereumService: RequestEthereumService;
+
     /**
      * Constructor.
      * @param {object=} options
@@ -49,7 +59,14 @@ export class RequestNetwork {
      * @param {boolean=} options.useIpfsPublic - use public ipfs node if true, private one specified in “src/config.json ipfs.nodeUrlDefault.private” otherwise (default : true)
      * @return {object} An instance of the requestNetwork.js RequestNetwork class.
      */
-    constructor({ provider, networkId, useIpfsPublic = true }: { provider?: any, networkId?: number, useIpfsPublic?: boolean } = {}) {
+    constructor(options?: any, networkId?: number, useIpfsPublic?: boolean) {
+        let provider = options;
+        if (typeof options === 'object') {
+            provider = options.provider;
+            networkId = options.networkId;
+            useIpfsPublic = options.useIpfsPublic;
+        }
+
         if (provider && ! networkId) {
             throw new Error('if you give provider you have to give the networkId too');
         }
@@ -61,8 +78,10 @@ export class RequestNetwork {
         Ipfs.init(useIpfsPublic);
 
         requestCoreService = new RequestCoreService();
-
         requestEthereumService = new RequestEthereumService();
+
+        this.requestCoreService = requestCoreService;
+        this.requestEthereumService = requestEthereumService;
     }
 
     // Async factory function
@@ -106,7 +125,7 @@ export class RequestNetwork {
 
         promise.then(({ request, transaction } : { request: any, transaction: object }) => {
             return promiEvent.resolve({
-                request: new Request(request.requestId, currency),
+                request: new RequestNetwork.Request(request.requestId, currency),
                 transaction,
             });
         });
@@ -119,7 +138,7 @@ export class RequestNetwork {
     async fromRequestId(requestId: string) {
         const requestData = await requestCoreService.getRequest(requestId);
         const currency: RequestNetwork.Currency = currencyContracts.currencyFromContractAddress(requestData.currencyContract.address);
-        return new Request(requestId, currency);
+        return new RequestNetwork.Request(requestId, currency);
     }
     
     async createSignedRequest(
@@ -127,7 +146,7 @@ export class RequestNetwork {
         currency: RequestNetwork.Currency,
         payees: Payee[],
         expirationDate: number
-    ): Promise<SignedRequest> {
+    ): Promise<RequestNetwork.SignedRequest> {
         if (currency !== RequestNetwork.Currency.Ethereum) {
             throw new Error('Currency not implemented');
         }
@@ -144,10 +163,10 @@ export class RequestNetwork {
             payees.map(payee => payee.paymentAddress)
         );
 
-        return new SignedRequest(signedRequestData);
+        return new RequestNetwork.SignedRequest(signedRequestData);
     }
 
-    broadcastSignedRequest(signedRequest: SignedRequest, payer: Payer): typeof Web3PromiEvent {
+    broadcastSignedRequest(signedRequest: RequestNetwork.SignedRequest, payer: Payer): typeof Web3PromiEvent {
         if (payer.refundAddress && payer.idAddress !== payer.refundAddress) {
             throw new Error('Different idAddress and paymentAddress for Payer of signed request not yet supported');
         }
@@ -172,7 +191,7 @@ export class RequestNetwork {
 
         promise.then(({ request, transaction } : { request: any, transaction: object }) => {
             return promiEvent.resolve({
-                request: new Request(request.requestId, currency),
+                request: new RequestNetwork.Request(request.requestId, currency),
                 transaction,
             });
         });
@@ -183,97 +202,96 @@ export class RequestNetwork {
     }
 }
 
-export class Request {
-    public requestId: string
-    public currency: RequestNetwork.Currency
-    private service: any
+namespace RequestNetwork {      
+    export class Request {
+        public requestId: string
+        public currency: RequestNetwork.Currency
+        private service: any
 
-    constructor(requestId: string, currency: RequestNetwork.Currency) {
-        this.requestId = requestId;
-        this.currency = currency;
+        constructor(requestId: string, currency: RequestNetwork.Currency) {
+            this.requestId = requestId;
+            this.currency = currency;
 
-        this.service =  serviceForCurrency(currency);
-    }
+            this.service =  serviceForCurrency(currency);
+        }
 
-    pay(amountsToPay: number[] = [], additionals: number[] = []): typeof Web3PromiEvent {
-        return promiEventLibraryWrap(this, () => 
-            this.service.paymentAction(
-                this.requestId,
-                amountsToPay,
-                additionals
+        pay(amountsToPay: number[] = [], additionals: number[] = []): typeof Web3PromiEvent {
+            return promiEventLibraryWrap(this, () => 
+                this.service.paymentAction(
+                    this.requestId,
+                    amountsToPay,
+                    additionals
+                )
             )
-        )
-    }
-
-    public cancel() : typeof Web3PromiEvent {
-        return promiEventLibraryWrap(this, () => 
-            this.service.cancel(this.requestId)
-        )
-    }
-
-    public refund(amountToRefund: number) : typeof Web3PromiEvent {
-        return promiEventLibraryWrap(this, () => 
-            this.service.refundAction(this.requestId, amountToRefund)
-        )
-    }
-
-    // public subtractAction(subtracts) : typeof Web3PromiEvent {
-    //     subtractAction(this.requestId, subtracts)
-    // }
-    // public additionalAction(additionals) : typeof Web3PromiEvent {
-    //     additionalAction(this.requestId, additionals)
-    // }
-
-    async getData() : Promise<RequestData> {
-        return requestCoreService.getRequest(this.requestId);
-    }    
-
-    getEvents(fromBlock?: number, toBlock?: number) : Promise<Event[]> {
-        return requestCoreService.getRequestEvents(this.requestId, fromBlock, toBlock)
-    }    
-}    
-
-export class SignedRequest{
-    public signedRequestData: SignedRequestData
-    
-    constructor(signedRequest: SignedRequestData|string) {
-        this.signedRequestData = typeof signedRequest === 'string' ? 
-            this.deserializeForUri(signedRequest) :
-            signedRequest;
-    }
-    
-    public getInvalidErrorMessage(payer: Payer): string {
-        if (payer.refundAddress && payer.idAddress !== payer.refundAddress) {
-            throw new Error('Different idAddress and paymentAddress for Payer of signed request not yet supported');
         }
 
-        const currency: RequestNetwork.Currency = currencyContracts.currencyFromContractAddress(
-            this.signedRequestData.currencyContract
-        );
+        public cancel() : typeof Web3PromiEvent {
+            return promiEventLibraryWrap(this, () => 
+                this.service.cancel(this.requestId)
+            )
+        }
+
+        public refund(amountToRefund: number) : typeof Web3PromiEvent {
+            return promiEventLibraryWrap(this, () => 
+                this.service.refundAction(this.requestId, amountToRefund)
+            )
+        }
+
+        // public subtractAction(subtracts) : typeof Web3PromiEvent {
+        //     subtractAction(this.requestId, subtracts)
+        // }
+        // public additionalAction(additionals) : typeof Web3PromiEvent {
+        //     additionalAction(this.requestId, additionals)
+        // }
+
+        async getData() : Promise<RequestData> {
+            return requestCoreService.getRequest(this.requestId);
+        }    
+
+        getEvents(fromBlock?: number, toBlock?: number) : Promise<Event[]> {
+            return requestCoreService.getRequestEvents(this.requestId, fromBlock, toBlock)
+        }    
+    }    
+
+    export class SignedRequest{
+        public signedRequestData: SignedRequestData
         
-        if (currency !== RequestNetwork.Currency.Ethereum) {
-            throw new Error('Currency not implemented');
+        constructor(signedRequest: SignedRequestData|string) {
+            this.signedRequestData = typeof signedRequest === 'string' ? 
+                this.deserializeForUri(signedRequest) :
+                signedRequest;
+        }
+        
+        public getInvalidErrorMessage(payer: Payer): string {
+            if (payer.refundAddress && payer.idAddress !== payer.refundAddress) {
+                throw new Error('Different idAddress and paymentAddress for Payer of signed request not yet supported');
+            }
+
+            const currency: RequestNetwork.Currency = currencyContracts.currencyFromContractAddress(
+                this.signedRequestData.currencyContract
+            );
+            
+            if (currency !== RequestNetwork.Currency.Ethereum) {
+                throw new Error('Currency not implemented');
+            }
+
+            const requestEthereumService = serviceForCurrency(RequestNetwork.Currency.Ethereum);
+
+            return requestEthereumService.isSignedRequestHasError(this.signedRequestData, payer.idAddress);
         }
 
-        const requestEthereumService = serviceForCurrency(RequestNetwork.Currency.Ethereum);
+        isValid(payer: Payer): boolean {
+            return this.getInvalidErrorMessage(payer) === '';
+        }
 
-        return requestEthereumService.isSignedRequestHasError(this.signedRequestData, payer.idAddress);
+        serializeForUri(): string {
+            return JSON.stringify(this.signedRequestData);
+        }
+        
+        private deserializeForUri(serializedRequest: string): SignedRequestData {
+            return JSON.parse(serializedRequest);
+        }
     }
-
-    isValid(payer: Payer): boolean {
-        return this.getInvalidErrorMessage(payer) === '';
-    }
-
-    serializeForUri(): string {
-        return JSON.stringify(this.signedRequestData);
-    }
-    
-    private deserializeForUri(serializedRequest: string): SignedRequestData {
-        return JSON.parse(serializedRequest);
-    }
-}
-
-export namespace RequestNetwork {
     export enum Role {
         Payer,
         Payee,
@@ -333,8 +351,6 @@ interface Event {
     name: string,
 }
 
-export default class RequestNetworkLegacy {
-    constructor(provider?: any, networkId?: number, useIpfsPublic: boolean = true) {
-        throw new Error('Deprecated');
-    }
-}
+
+export default RequestNetwork;
+

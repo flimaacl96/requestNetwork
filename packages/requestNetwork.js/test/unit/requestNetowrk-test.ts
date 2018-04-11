@@ -1,4 +1,4 @@
-import { RequestNetwork, Request, SignedRequest } from '../../src/requestNetwork';
+import RequestNetwork from '../../src/requestNetwork';
 const Web3 = require('web3');
 
 const chai = require('chai');
@@ -122,7 +122,7 @@ describe('Request Network API', () => {
             .on('broadcasted', broadcastedSpy)
             .on('event-that-doesnt-exist', notCalledSpy);
 
-        expect(request).to.be.an.instanceof(Request)
+        expect(request).to.be.an.instanceof(RequestNetwork.Request)
         expect(broadcastedSpy).to.have.been.called();
         expect(notCalledSpy).to.have.been.called.below(1);
     });
@@ -166,7 +166,7 @@ describe('Request Network API', () => {
             Date.now() + 3600*1000
         );
 
-        expect(signedRequest).to.be.instanceof(SignedRequest);
+        expect(signedRequest).to.be.instanceof(RequestNetwork.SignedRequest);
         expect(signedRequest.signedRequestData.signature).to.exist;
     });
 
@@ -215,7 +215,7 @@ describe('Request Network API', () => {
             .on('broadcasted', broadcastedSpy)
             .on('event-that-doesnt-exist', notCalledSpy);
 
-        expect(request).to.be.an.instanceof(Request)
+        expect(request).to.be.an.instanceof(RequestNetwork.Request)
         expect(broadcastedSpy).to.have.been.called();
         expect(notCalledSpy).to.have.been.called.below(1);
     });
@@ -229,7 +229,7 @@ describe('Request Network API', () => {
         );
 
         const serialized = signedRequest.serializeForUri();
-        const deserialized = new SignedRequest(serialized);
+        const deserialized = new RequestNetwork.SignedRequest(serialized);
 
         expect(deserialized.signedRequestData.signature).to.equal(signedRequest.signedRequestData.signature);
     });

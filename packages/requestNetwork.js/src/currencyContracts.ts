@@ -1,5 +1,5 @@
 import requestArtifacts from 'requestnetworkartifacts';
-import { Request, RequestNetwork } from '../src/requestNetwork';
+import RequestNetwork from '../src/requestNetwork';
 
 export default {
     currencyFromContractAddress(address: string) {
