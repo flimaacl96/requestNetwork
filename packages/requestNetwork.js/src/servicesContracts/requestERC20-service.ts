@@ -5,7 +5,7 @@ import Erc20Service from '../servicesExternal/erc20-service';
 
 import * as ServicesContracts from '../servicesContracts';
 
-import { Web3Single } from '../servicesExternal/web3-single';
+import Web3Single from '../servicesExternal/web3-single';
 
 import * as ServiceContracts from '../servicesContracts';
 

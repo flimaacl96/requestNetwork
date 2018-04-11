@@ -6,7 +6,7 @@ const tokenMintAtStart = '100000000000000000000000000000000000000000000000000000
 import requestArtifacts from 'requestnetworkartifacts';
 import TestToken from '../test/centralBank';
 
-import { Web3Single } from '../src/servicesExternal/web3-single';
+import Web3Single from '../src/servicesExternal/web3-single';
 
 const requestCoreJson = requestArtifacts('private', 'last-RequestCore');
 const requestEthereumJson = requestArtifacts('private', 'last-RequestEthereum');

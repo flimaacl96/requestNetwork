@@ -5,7 +5,7 @@ import * as ServicesContracts from '../servicesContracts';
 import * as Types from '../types';
 
 import Ipfs from '../servicesExternal/ipfs-service';
-import { Web3Single } from '../servicesExternal/web3-single';
+import Web3Single from '../servicesExternal/web3-single';
 
 // @ts-ignore
 const ETH_ABI = require('../lib/ethereumjs-abi-perso.js');

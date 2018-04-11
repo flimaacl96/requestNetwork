@@ -1,7 +1,9 @@
+import BitcoinService from '../servicesExternal/bitcoin-service';
+
 import RequestCoreService from '../servicesCore/requestCore-service';
 import Ipfs from '../servicesExternal/ipfs-service';
 
-import { Web3Single } from '../servicesExternal/web3-single';
+import Web3Single from '../servicesExternal/web3-single';
 
 import * as ServiceContracts from '../servicesContracts';
 
@@ -51,9 +53,7 @@ export default class RequestBitcoinOfflineService {
      */
     protected instanceRequestBitcoinOfflineLast: any;
 
-    private bitcoinBlockExplorer: any;
-
-    private bitcoinNetworkId: number;
+    private bitcoinService: BitcoinService;
 
     private web3Single: Web3Single;
 
@@ -61,6 +61,7 @@ export default class RequestBitcoinOfflineService {
      * constructor to Instantiates a new RequestBitcoinOfflineService
      */
     constructor() {
+        this.bitcoinService = BitcoinService.getInstance();
         this.web3Single = Web3Single.getInstance();
         this.ipfs = Ipfs.getInstance();
 
@@ -74,10 +75,6 @@ export default class RequestBitcoinOfflineService {
         this.abiRequestBitcoinOfflineLast = requestBitcoinOfflineLastArtifact.abi;
         this.addressRequestBitcoinOfflineLast = requestBitcoinOfflineLastArtifact.address;
         this.instanceRequestBitcoinOfflineLast = requestBitcoinOfflineLastArtifact.instance;
-
-        this.bitcoinNetworkId = this.web3Single.networkName === 'main' ? 1 : 3;
-
-        this.bitcoinBlockExplorer = require('blockchain.info/blockexplorer').usingNetwork(this.bitcoinNetworkId);
     }
 
     /**
@@ -762,7 +759,7 @@ export default class RequestBitcoinOfflineService {
                 const allPayeesRefund: string[] = [payeeRefundAddress].concat(subPayeesRefundAddress);
 
                 // get all payement on the payees addresses
-                const dataPayments = await this.bitcoinBlockExplorer.getMultiAddress(allPayees);
+                const dataPayments = await this.bitcoinService.getMultiAddress(allPayees);
 
                 const balance: any = {};
                 for (const tx of dataPayments.txs) {
@@ -777,7 +774,7 @@ export default class RequestBitcoinOfflineService {
                 }
 
                 // get all refund on the payees refund addresses
-                const dataRefunds = await this.bitcoinBlockExplorer.getMultiAddress(allPayeesRefund);
+                const dataRefunds = await this.bitcoinService.getMultiAddress(allPayeesRefund);
 
                 const balanceRefund: any = {};
                 for (const tx of dataPayments.txs) {
@@ -947,9 +944,9 @@ export default class RequestBitcoinOfflineService {
             const allPayeesRefund: string[] = [payerRefundAddress].concat(subPayeesRefundAddress);
 
             // get all payment on the payees addresses
-            const dataPayments = await this.bitcoinBlockExplorer.getMultiAddress(allPayees);
+            const dataPayments = await this.bitcoinService.getMultiAddress(allPayees);
             // get all refund on the payees addresses
-            const dataRefunds = await this.bitcoinBlockExplorer.getMultiAddress(allPayeesRefund);
+            const dataRefunds = await this.bitcoinService.getMultiAddress(allPayeesRefund);
 
             const eventPayments: any[] = [];
             for (const tx of dataPayments.txs) {
@@ -972,7 +969,7 @@ export default class RequestBitcoinOfflineService {
             const eventRefunds: any[] = [];
             for (const tx of dataPayments.txs) {
                 for (const o of tx.out) {
-                    if (allPayees.indexOf(o.addr) !== -1) {
+                    if (allPayeesRefund.indexOf(o.addr) !== -1) {
                         eventRefunds.push({ _meta: { hash: tx.hash, blockNumber: tx.block_height, timestamp: tx.time},
                                                 data: {
                                                     0: _request.requestId,

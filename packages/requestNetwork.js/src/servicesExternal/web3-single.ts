@@ -11,7 +11,7 @@ const ETH_ABI = require('../lib/ethereumjs-abi-perso.js');
 /**
  * The Web3Single class is the singleton class containing the web3.js interface
  */
-export class Web3Single {
+export default class Web3Single {
     /**
      * Initialized the class Web3Single
      * @param   provider        The Web3.js Provider instance you would like the requestNetwork.js library

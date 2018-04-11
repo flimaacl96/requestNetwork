@@ -6,10 +6,9 @@ import RequestBitcoinOfflineService from './servicesContracts/requestBitcoinOffl
 import RequestERC20Service from '../src/servicesContracts/requestERC20-service';
 import RequestEthereumService from '../src/servicesContracts/requestEthereum-service';
 
-// Synchrone Extension ----------------------
-
+import BitcoinService from './servicesExternal/bitcoin-service';
 import Ipfs from './servicesExternal/ipfs-service';
-import { Web3Single } from './servicesExternal/web3-single';
+import Web3Single from './servicesExternal/web3-single';
 
 /**
  * The RequestNetwork class is the single entry-point into the requestNetwork.js library.
@@ -43,7 +42,7 @@ export default class RequestNetwork {
      * @param   useIpfsPublic   use public ipfs node if true, private one specified in “src/config.json ipfs.nodeUrlDefault.private” otherwise (default : true)
      * @return  An instance of the requestNetwork.js RequestNetwork class.
      */
-    constructor(provider?: any, networkId?: number, useIpfsPublic: boolean = true) {
+    constructor(provider?: any, networkId?: number, useIpfsPublic: boolean = true, bitcoinNetworkId?: number) {
         if (provider && ! networkId) {
             throw Error('if you give provider you have to give the networkId too');
         }
@@ -51,6 +50,9 @@ export default class RequestNetwork {
         Web3Single.init(provider, networkId);
         // init ipfs wrapper singleton
         Ipfs.init(useIpfsPublic);
+        // init bitcoin wrapper singleton
+        BitcoinService.init(bitcoinNetworkId);
+
         // init interface services
         this.requestCoreService = new RequestCoreService();
         this.requestEthereumService = new RequestEthereumService();
