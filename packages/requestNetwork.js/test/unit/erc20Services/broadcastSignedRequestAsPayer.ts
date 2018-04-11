@@ -307,4 +307,43 @@ describe('erc20 broadcastSignedRequestAsPayer', () => {
         expect(result.request.currencyContract.address.toLowerCase(), 'currencyContract is wrong').to.equal(addressRequestERC20);
     });
 
+
+    it('broadcast request as payer with allowance too low', async function () {
+        // approve
+        await rn.requestERC20Service.approveTokenForSignedRequest(signedRequest, arbitraryAmount+arbitraryAmount2+arbitraryAmount3+6-1, {from: defaultAccount});
+
+        try {
+            await rn.requestERC20Service.broadcastSignedRequestAsPayer(
+                signedRequest,
+                [arbitraryAmount+3,arbitraryAmount2+2,arbitraryAmount3+1],
+                [3, 2, 1])
+            .on('broadcasted', (data: any) => {
+                expect(data.transaction, 'data.transaction.hash is wrong').to.have.property('hash');
+            });
+            expect(false, 'exception not thrown').to.be.true; 
+        } catch (e) {
+            utils.expectEqualsException(e, Error('allowance of token is too low'),'exception not right');
+        }
+
+    });
+
+    it('broadcast request as payer with allowance too low but skipERC20checkAllowance', async function () {
+        // approve
+        await rn.requestERC20Service.approveTokenForSignedRequest(signedRequest, 0, {from: defaultAccount});
+
+        try {
+            await rn.requestERC20Service.broadcastSignedRequestAsPayer(
+                signedRequest,
+                [arbitraryAmount+3,arbitraryAmount2+2,arbitraryAmount3+1],
+                [3, 2, 1],
+                {skipERC20checkAllowance:true})
+            .on('broadcasted', (data: any) => {
+                expect(data.transaction, 'data.transaction.hash is wrong').to.have.property('hash');
+            });
+            expect(false, 'exception not thrown').to.be.true; 
+        } catch (e) {
+            utils.expectEqualsException(e, Error('Returned error: VM Exception while processing transaction: revert'),'exception not right');
+        }
+
+    });
 });
