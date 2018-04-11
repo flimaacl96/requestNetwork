@@ -1,6 +1,7 @@
 import requestArtifacts from 'requestnetworkartifacts';
 
 // services
+import RequestBitcoinOfflineService from './servicesContracts/requestBitcoinOffline-service';
 import RequestERC20Service from './servicesContracts/requestERC20-service';
 import RequestEthereumService from './servicesContracts/requestEthereum-service';
 
@@ -20,6 +21,8 @@ export const getServiceFromAddress = (_networkName: string, _address: string): a
             return new RequestERC20Service();
         case 'RequestEthereum':
             return new RequestEthereumService();
+        case 'RequestBitcoinOffline':
+            return new RequestBitcoinOfflineService();
         default:
             return;
     }

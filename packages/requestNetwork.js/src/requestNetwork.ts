@@ -2,6 +2,7 @@
 import RequestCoreService from '../src/servicesCore/requestCore-service';
 
 // Contract ---------------------------------
+import RequestBitcoinOfflineService from './servicesContracts/requestBitcoinOffline-service';
 import RequestERC20Service from '../src/servicesContracts/requestERC20-service';
 import RequestEthereumService from '../src/servicesContracts/requestEthereum-service';
 
@@ -24,6 +25,11 @@ export default class RequestNetwork {
      * requestERC20Service class containing methods for interacting with the ERC20 currencies contract
      */
     public requestERC20Service: RequestERC20Service;
+
+    /**
+     * requestEthereumService class containing methods for interacting with the Ethereum currency contract
+     */
+    public requestBitcoinOfflineService: RequestBitcoinOfflineService;
 
     /**
      * requestCoreService class containing methods for interacting with the Request Core
@@ -49,5 +55,6 @@ export default class RequestNetwork {
         this.requestCoreService = new RequestCoreService();
         this.requestEthereumService = new RequestEthereumService();
         this.requestERC20Service = new RequestERC20Service();
+        this.requestBitcoinOfflineService = new RequestBitcoinOfflineService();
     }
 }

@@ -106,7 +106,7 @@ export default class RequestCoreService {
                                 balance: new BN(dataRequest.payeeBalance),
                                 expectedAmount: new BN(dataRequest.payeeExpectedAmount)};
 
-                const dataResult: any = {
+                let dataResult: any = {
                     creator,
                     currencyContract: dataRequest.currencyContract,
                     data,
@@ -119,9 +119,7 @@ export default class RequestCoreService {
                 // get information from the currency contract
                 const serviceContract = ServicesContracts.getServiceFromAddress(this.web3Single.networkName, dataRequest.currencyContract);
                 if (serviceContract) {
-                    const ccyContractDetails = await serviceContract.getRequestCurrencyContractInfo(_requestId, dataRequest.currencyContract, coreContract);
-                    dataResult.currencyContract = Object.assign(ccyContractDetails,
-                                                                {address: dataResult.currencyContract});
+                    dataResult = await serviceContract.getRequestCurrencyContractInfo(dataResult, coreContract);
                 }
 
                 // get ipfs data if needed
@@ -242,6 +240,7 @@ export default class RequestCoreService {
             const coreContract = this.getCoreContractFromRequestId(_requestId);
             coreContract.instance.methods.getRequest(_requestId).call(async (err: Error, request: any) => {
                 if (err) return reject(err);
+                request.requestId = _requestId;
 
                 try {
                     const currencyContract = request.currencyContract;
@@ -286,12 +285,6 @@ export default class RequestCoreService {
                                         });
                                     }));
 
-                    // let eventsExtensions = [];
-                    // const serviceExtension = ServicesContracts.getServiceFromAddress(this.web3Single.networkName, extension);
-                    // if (serviceExtension) {
-                    //     eventsExtensions = await serviceExtension.getRequestEventsExtensionInfo(request, _fromBlock, _toBlock);
-                    // }
-
                     let eventsCurrencyContract = [];
                     const serviceContract = ServicesContracts.getServiceFromAddress(this.web3Single.networkName, currencyContract);
                     if (serviceContract) {
@@ -300,7 +293,6 @@ export default class RequestCoreService {
                     }
 
                     return resolve(eventsCore
-                                    // .concat(eventsExtensions)
                                     .concat(eventsCurrencyContract)
                                     .sort( (a: any, b: any) => {
                                       const diffBlockNum = a._meta.blockNumber - b._meta.blockNumber;

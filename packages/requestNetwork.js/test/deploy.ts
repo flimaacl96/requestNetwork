@@ -10,7 +10,7 @@ import { Web3Single } from '../src/servicesExternal/web3-single';
 const requestCoreJson = requestArtifacts('private', 'last-RequestCore');
 const requestEthereumJson = requestArtifacts('private', 'last-RequestEthereum');
 const requestERC20Json = requestArtifacts('private', 'last-RequestErc20-0x345ca3e014aaf5dca488057592ee47305d9b3e10');
-
+const requestBitcoinOfflineJson = requestArtifacts('private', 'last-RequestBitcoinOffline');
 
 
 Web3Single.init('http://localhost:8545', 10000000000);
@@ -20,10 +20,12 @@ const instanceRequestCore = new web3Single.web3.eth.Contract(requestCoreJson.abi
 const instanceRequestEthereum = new web3Single.web3.eth.Contract(requestEthereumJson.abi);
 const instanceRequestERC20 = new web3Single.web3.eth.Contract(requestERC20Json.abi);
 const instanceERC20TestToken = new web3Single.web3.eth.Contract(TestToken.abi);
+const instanceRequestBitcoinOffline = new web3Single.web3.eth.Contract(requestBitcoinOfflineJson.abi);
 
 let addressRequestCore: string;
 let addressRequestEthereum: string;
 let addressRequestERC20: string;
+let addressRequestBitcoinOffline: string;
 
 let addressCentralBank: string;
 
@@ -215,9 +217,54 @@ web3Single.getDefaultAccount().then((creator) => {
                                 console.log(error)
                                 console.log('setMaxCollectable - error ##########################')
                             });
-
                         });
 
+                    instanceRequestBitcoinOffline.deploy({
+                            data: requestBitcoinOfflineJson.bytecode,
+                            arguments: [addressRequestCore, addressContractBurner]
+                        })
+                        .send({
+                            from: creator,
+                            gas: 15000000
+                        }, (error: Error, transactionHash: string) => {
+                            if (error) {
+                                console.log('RequestBitcoinOffline - error transactionHash ##########################')
+                                console.log(error)
+                                console.log(transactionHash)
+                                console.log('RequestBitcoinOffline - error transactionHash ##########################')
+                            }
+                            // console.log('RequestCore - transactionHash : '+transactionHash);
+                        })
+                        .on('error', (error: Error) => {
+                            console.log('RequestBitcoinOffline - error transactionHash ##########################')
+                            console.log(error)
+                            console.log('RequestBitcoinOffline - error transactionHash ##########################')
+                        })
+                        .then((newContractInstance: any) => {
+                            addressRequestBitcoinOffline = newContractInstance.options.address;
+                            console.log('RequestBitcoinOffline - address : ' + addressRequestBitcoinOffline) // instance with the new contract address
+
+
+                            web3Single.broadcastMethod(
+                                newContractInstanceRequestCore.methods.adminAddTrustedCurrencyContract(addressRequestBitcoinOffline),
+                                (transactionHash: string) => {
+                                    // we do nothing here!
+                                },
+                                (receipt: any) => {
+                                    if (receipt.status == 1) {
+                                        console.log('adminAddTrustedCurrencyContract: ' + addressRequestBitcoinOffline);
+                                    }
+                                },
+                                (confirmationNumber: number, receipt: any) => {
+                                    // we do nothing here!
+                                },
+                                (error: Error) => {
+                                    console.log('adminAddTrustedCurrencyContract - error ##########################')
+                                    console.log(error)
+                                    console.log('adminAddTrustedCurrencyContract - error ##########################')
+                                });
+
+                    });
                 });
             });
     });

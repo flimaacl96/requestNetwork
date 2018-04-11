@@ -5,3 +5,4 @@ declare module '*.json' {
 
 declare module 'requestnetworkartifacts';
 declare module 'ethereumjs-util';
+declare module 'wallet-address-validator';
