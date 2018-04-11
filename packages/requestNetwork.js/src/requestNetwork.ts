@@ -1,18 +1,23 @@
 import Ipfs from './servicesExternal/ipfs-service';
 import { Web3Single } from './servicesExternal/web3-single';
 import RequestCoreService from '../src/servicesCore/requestCore-service';
-import RequestEthereumService from '../src/servicesContracts/requestEthereum-service';
 import currencyContracts from './currencyContracts';
+import RequestEthereumService from './servicesContracts/requestEthereum-service';
 
 const BN = require('bn.js');
 const Web3PromiEvent = require('web3-core-promievent');
-
 
 // RequestCore service containing methods for interacting with the Request Core
 let requestCoreService: RequestCoreService;
 
 // RequestEthereum service containing methods for interacting with the Ethereum currency contract
-let requestEthereumService: RequestEthereumService;
+let requestEthereumService: RequestEthereumService; 
+
+function serviceForCurrency(currency: RequestNetwork.Currency) {
+    return {
+        [RequestNetwork.Currency.Ethereum as number]: requestEthereumService,
+    }[currency];
+}
 
 function promiEventLibraryWrap(request: Request, callback: Function, events: string[] = ['broadcasted']) : typeof Web3PromiEvent {
     const promiEvent = Web3PromiEvent();
@@ -56,6 +61,7 @@ export class RequestNetwork {
         Ipfs.init(useIpfsPublic);
 
         requestCoreService = new RequestCoreService();
+
         requestEthereumService = new RequestEthereumService();
     }
 
@@ -66,10 +72,15 @@ export class RequestNetwork {
         payees: Payee[],
         payer: Payer
     ): typeof Web3PromiEvent {
+        if (currency !== RequestNetwork.Currency.Ethereum) {
+            throw new Error('Currency not implemented');
+        }
+        
+        const requestEthereumService = serviceForCurrency(RequestNetwork.Currency.Ethereum);
         const promiEvent = Web3PromiEvent();
         let promise;
 
-        if (as === RequestNetwork.Role.Payee && currency === RequestNetwork.Currency.Ethereum) {
+        if (as === RequestNetwork.Role.Payee) {
             promise = requestEthereumService.createRequestAsPayee(
                 payees.map(payee => payee.idAddress),
                 payees.map(payee => payee.expectedAmount),
@@ -79,7 +90,7 @@ export class RequestNetwork {
             );
         }
 
-        if (as === RequestNetwork.Role.Payer && currency === RequestNetwork.Currency.Ethereum) {
+        if (as === RequestNetwork.Role.Payer) {
             promise = requestEthereumService.createRequestAsPayer(
                 payees.map(payee => payee.idAddress),
                 payees.map(payee => payee.expectedAmount),
@@ -91,10 +102,6 @@ export class RequestNetwork {
                 undefined, // _extensionParams
                 { from: payer.idAddress }
             );
-        }
-
-        if (!promise) {
-            throw new Error('Role-Currency Not implemented');
         }
 
         promise.then(({ request, transaction } : { request: any, transaction: object }) => {
@@ -121,20 +128,21 @@ export class RequestNetwork {
         payees: Payee[],
         expirationDate: number
     ): Promise<SignedRequest> {
-        let signedRequestData = null;
+        if (currency !== RequestNetwork.Currency.Ethereum) {
+            throw new Error('Currency not implemented');
+        }
+        if (as !== RequestNetwork.Role.Payee) {
+            throw new Error('Role not implemented');
+        }
         
-        if (as === RequestNetwork.Role.Payee && currency === RequestNetwork.Currency.Ethereum) {
-            signedRequestData = await requestEthereumService.signRequestAsPayee(
-                payees.map(payee => payee.idAddress),
-                payees.map(payee => payee.expectedAmount),
-                expirationDate,
-                payees.map(payee => payee.paymentAddress)
-            );
-        }
+        const requestEthereumService = serviceForCurrency(RequestNetwork.Currency.Ethereum);
 
-        if (!signedRequestData) {
-            throw new Error('Role-Currency Not implemented');
-        }
+        const signedRequestData = await requestEthereumService.signRequestAsPayee(
+            payees.map(payee => payee.idAddress),
+            payees.map(payee => payee.expectedAmount),
+            expirationDate,
+            payees.map(payee => payee.paymentAddress)
+        );
 
         return new SignedRequest(signedRequestData);
     }
@@ -143,10 +151,16 @@ export class RequestNetwork {
         if (payer.refundAddress && payer.idAddress !== payer.refundAddress) {
             throw new Error('Different idAddress and paymentAddress for Payer of signed request not yet supported');
         }
-
+        
         const currency: RequestNetwork.Currency = currencyContracts.currencyFromContractAddress(
             signedRequest.signedRequestData.currencyContract
         );
+        
+        if (currency !== RequestNetwork.Currency.Ethereum) {
+            throw new Error('Currency not implemented');
+        }
+
+        const requestEthereumService = serviceForCurrency(RequestNetwork.Currency.Ethereum);
 
         const promiEvent = Web3PromiEvent();
         let promise = requestEthereumService.broadcastSignedRequestAsPayer(
@@ -172,15 +186,18 @@ export class RequestNetwork {
 export class Request {
     public requestId: string
     public currency: RequestNetwork.Currency
+    private service: any
 
     constructor(requestId: string, currency: RequestNetwork.Currency) {
         this.requestId = requestId;
         this.currency = currency;
+
+        this.service =  serviceForCurrency(currency);
     }
 
     pay(amountsToPay: number[] = [], additionals: number[] = []): typeof Web3PromiEvent {
         return promiEventLibraryWrap(this, () => 
-            requestEthereumService.paymentAction(
+            this.service.paymentAction(
                 this.requestId,
                 amountsToPay,
                 additionals
@@ -190,13 +207,13 @@ export class Request {
 
     public cancel() : typeof Web3PromiEvent {
         return promiEventLibraryWrap(this, () => 
-            requestEthereumService.cancel(this.requestId)
+            this.service.cancel(this.requestId)
         )
     }
 
     public refund(amountToRefund: number) : typeof Web3PromiEvent {
         return promiEventLibraryWrap(this, () => 
-            requestEthereumService.refundAction(this.requestId, amountToRefund)
+            this.service.refundAction(this.requestId, amountToRefund)
         )
     }
 
@@ -216,7 +233,6 @@ export class Request {
     }    
 }    
 
-
 export class SignedRequest{
     public signedRequestData: SignedRequestData
     
@@ -230,6 +246,16 @@ export class SignedRequest{
         if (payer.refundAddress && payer.idAddress !== payer.refundAddress) {
             throw new Error('Different idAddress and paymentAddress for Payer of signed request not yet supported');
         }
+
+        const currency: RequestNetwork.Currency = currencyContracts.currencyFromContractAddress(
+            this.signedRequestData.currencyContract
+        );
+        
+        if (currency !== RequestNetwork.Currency.Ethereum) {
+            throw new Error('Currency not implemented');
+        }
+
+        const requestEthereumService = serviceForCurrency(RequestNetwork.Currency.Ethereum);
 
         return requestEthereumService.isSignedRequestHasError(this.signedRequestData, payer.idAddress);
     }
