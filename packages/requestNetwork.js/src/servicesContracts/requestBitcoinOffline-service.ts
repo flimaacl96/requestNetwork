@@ -916,6 +916,7 @@ export default class RequestBitcoinOfflineService {
      */
     public async getRequestEventsCurrencyContractInfo(
         _request: any,
+        _coreContract: any,
         _fromBlock ?: number,
         _toBlock ?: number): Promise < any > {
         try {
@@ -924,7 +925,7 @@ export default class RequestBitcoinOfflineService {
             // payee payment address
             const payeePaymentAddress: string = await currencyContract.instance.methods.payeesPaymentAddress(_request.requestId, 0).call();
             // get subPayees payment addresses
-            const subPayeesCount = payeePaymentAddress.length - 1;
+            const subPayeesCount = await _coreContract.instance.methods.getSubPayeesCount(_request.requestId).call();
             const subPayeesPaymentAddress: string[] = [];
             for (let i = 0; i < subPayeesCount; i++) {
                 const paymentAddress = await currencyContract.instance.methods.payeesPaymentAddress(_request.requestId, i + 1).call();
@@ -955,10 +956,10 @@ export default class RequestBitcoinOfflineService {
                         eventPayments.push({ _meta: { hash: tx.hash, blockNumber: tx.block_height, timestamp: tx.time},
                                                 data: {
                                                     0: _request.requestId,
-                                                    1: payeePaymentAddress.indexOf(o.addr),
+                                                    1: allPayees.indexOf(o.addr),
                                                     2: new BN(o.value),
                                                     requestId: _request.requestId,
-                                                    payeeIndex: payeePaymentAddress.indexOf(o.addr),
+                                                    payeeIndex: allPayees.indexOf(o.addr),
                                                     deltaAmount: new BN(o.value),
                                                 },
                                                 name: 'UpdateBalance'});
@@ -973,10 +974,10 @@ export default class RequestBitcoinOfflineService {
                         eventRefunds.push({ _meta: { hash: tx.hash, blockNumber: tx.block_height, timestamp: tx.time},
                                                 data: {
                                                     0: _request.requestId,
-                                                    1: payeePaymentAddress.indexOf(o.addr),
+                                                    1: allPayeesRefund.indexOf(o.addr),
                                                     2: new BN(-o.value),
                                                     requestId: _request.requestId,
-                                                    payeeIndex: payeePaymentAddress.indexOf(o.addr),
+                                                    payeeIndex: allPayeesRefund.indexOf(o.addr),
                                                     deltaAmount: new BN(-o.value),
                                                 },
                                                 name: 'UpdateBalance'});

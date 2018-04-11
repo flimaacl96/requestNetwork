@@ -289,7 +289,7 @@ export default class RequestCoreService {
                     const serviceContract = ServicesContracts.getServiceFromAddress(this.web3Single.networkName, currencyContract);
                     if (serviceContract) {
                         eventsCurrencyContract = await serviceContract
-                                                .getRequestEventsCurrencyContractInfo(request, _fromBlock, _toBlock);
+                                                .getRequestEventsCurrencyContractInfo(request, coreContract, _fromBlock, _toBlock);
                     }
 
                     return resolve(eventsCore

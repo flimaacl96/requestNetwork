@@ -1216,8 +1216,9 @@ export default class RequestERC20Service {
      * @param   _toBlock    search events until this block (optional)
      * @return  promise of the object containing the events from the currency contract of the request (always {} here)
      */
-    public getRequestEventsCurrencyContractInfo(
+    public async getRequestEventsCurrencyContractInfo(
         _request: any,
+        _coreContract: any,
         _fromBlock ?: number,
         _toBlock ?: number): Promise < any > {
         return Promise.resolve([]);
