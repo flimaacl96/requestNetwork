@@ -1036,30 +1036,31 @@ export default class RequestERC20Service {
      * @return  promise of the information from the currency contract of the request
      */
     public getRequestCurrencyContractInfo(
-        _requestId: string,
-        currencyContractAddress: string,
+        requestData: any,
         coreContract: any): Promise < any > {
         return new Promise(async (resolve, reject) => {
             try {
-                const currencyContract = this.web3Single.getContractInstance(currencyContractAddress);
+                const currencyContract = this.web3Single.getContractInstance(requestData.currencyContract);
 
-                let payeePaymentAddress: string|undefined = await currencyContract.instance.methods.payeesPaymentAddress(_requestId, 0).call();
+                let payeePaymentAddress: string|undefined = await currencyContract.instance.methods.payeesPaymentAddress(requestData.requestId, 0).call();
                 payeePaymentAddress = payeePaymentAddress !== EMPTY_BYTES_20 ? payeePaymentAddress : undefined;
 
                 // get subPayees payment addresses
-                const subPayeesCount = await coreContract.instance.methods.getSubPayeesCount(_requestId).call();
+                const subPayeesCount = await coreContract.instance.methods.getSubPayeesCount(requestData._requestId).call();
                 const subPayeesPaymentAddress: string[] = [];
                 for (let i = 0; i < subPayeesCount; i++) {
-                    const paymentAddress = await currencyContract.instance.methods.payeesPaymentAddress(_requestId, i + 1).call();
+                    const paymentAddress = await currencyContract.instance.methods.payeesPaymentAddress(requestData.requestId, i + 1).call();
                     subPayeesPaymentAddress.push(paymentAddress !== EMPTY_BYTES_20 ? paymentAddress : undefined);
                 }
 
-                let payerRefundAddress: string|undefined = await currencyContract.instance.methods.payerRefundAddress(_requestId).call();
+                let payerRefundAddress: string|undefined = await currencyContract.instance.methods.payerRefundAddress(requestData.requestId).call();
                 payerRefundAddress = payerRefundAddress !== EMPTY_BYTES_20 ? payerRefundAddress : undefined;
 
                 const tokenAddress: string = await currencyContract.instance.methods.addressToken().call();
 
-                return resolve({tokenAddress, payeePaymentAddress, subPayeesPaymentAddress, payerRefundAddress});
+                requestData.currencyContract = {tokenAddress, payeePaymentAddress, subPayeesPaymentAddress, payerRefundAddress, address: requestData.currencyContract};
+
+                return resolve(requestData);
             } catch (e) {
                 return reject(e);
             }

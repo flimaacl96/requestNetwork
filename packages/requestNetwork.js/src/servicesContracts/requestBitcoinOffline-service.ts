@@ -805,8 +805,7 @@ export default class RequestBitcoinOfflineService {
                 refundTemp = new BN(balanceRefund[payeeRefundAddress]);
                 requestData.payee.balance = paymentTemp.sub(refundTemp);
 
-                requestData.currencyContract = Object.assign({payeePaymentAddress, subPayeesPaymentAddress, payeeRefundAddress, subPayeesRefundAddress},
-                                                                {address: requestData.currencyContract});
+                requestData.currencyContract = {payeePaymentAddress, subPayeesPaymentAddress, payeeRefundAddress, subPayeesRefundAddress, address: requestData.currencyContract};
 
                 return resolve(requestData);
             } catch (e) {
