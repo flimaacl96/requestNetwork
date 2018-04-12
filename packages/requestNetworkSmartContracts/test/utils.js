@@ -61,6 +61,10 @@ exports.bytes32StrToAddressStr = function(bytes32) {
 
 
 exports.createBytesForPaymentBitcoinAddress = function(_payeesPaymentAddress) {
+    return ethUtil.bufferToHex(exports.createBytesForPaymentBitcoinAddressBuffer(_payeesPaymentAddress));
+}
+
+exports.createBytesForPaymentBitcoinAddressBuffer = function(_payeesPaymentAddress) {
     const requestParts = [];
 
     for (const k in _payeesPaymentAddress) {
@@ -77,5 +81,5 @@ exports.createBytesForPaymentBitcoinAddress = function(_payeesPaymentAddress) {
         values.push(o.value);
     });
 
-    return ethUtil.bufferToHex(ethABI.solidityPack(types, values));
+    return ethABI.solidityPack(types, values);
 }

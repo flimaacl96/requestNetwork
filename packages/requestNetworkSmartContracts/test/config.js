@@ -40,5 +40,11 @@ var config = {
 	// "asynchrone": {
 	//	 	"requestBitcoinOffline.js": {
 				"requestBitcoinOfflineCreateRequestAsPayee.js":false,
+				"requestBitcoinOfflineCreateRequestAsPayee.js":false,
+				"requestBitcoinOfflineAccept.js":false, 
+				"requestBitcoinOfflineCancelByPayer.js":false, 
+				"requestBitcoinOfflineCancel.js":false,
+				"requestBitcoinOfflineSubtract.js":false, 
+				"requestBitcoinOfflineAdditional.js":false,
 };
 module.exports = config;
