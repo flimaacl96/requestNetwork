@@ -127,10 +127,10 @@ contract RequestBitcoinOffline is RequestCurrencyContractInterface {
 	 *
 	 * @return Returns the id of the request
 	 */
-/* 	function broadcastSignedRequestAsPayerAction(
+	function broadcastSignedRequestAsPayerAction(
 		bytes 		_requestData, // gather data to avoid "stack too deep"
-		string[] 	_payeesPaymentAddress,
-		string 	_payerRefundAddress,
+		bytes 		_payeesPaymentAddress,
+		bytes 		_payerRefundAddress,
 		uint256[] 	_additionals,
 		uint256 	_expirationDate,
 		bytes 		_signature)
@@ -147,7 +147,7 @@ contract RequestBitcoinOffline is RequestCurrencyContractInterface {
 
 		return createAcceptAndAdditionalsFromBytes(_requestData, _payeesPaymentAddress, _payerRefundAddress, _additionals);
 	}
- */
+
 	/*
 	 * @dev Internal function to create, accept and add additionals to a request as Payer
 	 *
@@ -160,10 +160,10 @@ contract RequestBitcoinOffline is RequestCurrencyContractInterface {
 	 *
 	 * @return Returns the id of the request
 	 */
-/* 	function createAcceptAndAdditionalsFromBytes(
+	function createAcceptAndAdditionalsFromBytes(
 		bytes 		_requestData,
-		string[] 	_payeesPaymentAddress,
-		string 	_payerRefundAddress,
+		bytes 		_payeesPaymentAddress,
+		bytes 		_payerRefundAddress,
 		uint256[] 	_additionals)
 		internal
 		returns(bytes32 requestId)
@@ -196,20 +196,15 @@ contract RequestBitcoinOffline is RequestCurrencyContractInterface {
 		// store request in the core
 		requestId = requestCore.createRequestFromBytes(_requestData);
 		
-		// set payment addresses for payees
-		for (uint8 j = 0; j < _payeesPaymentAddress.length; j = j.add(1)) {
-			payeesPaymentAddress[requestId][j] = _payeesPaymentAddress[j];
-		}
-
-		// set payment address for payer
-		payerRefundAddress[requestId] = _payerRefundAddress;
+		// set bitcoin addresses
+		extractAndStoreBitcoinAddresses(requestId, payeesCount, _payeesPaymentAddress, _payerRefundAddress);
 
 		// accept and pay the request with the value remaining after the fee collect
 		acceptAndAdditionals(requestId, _additionals);
 
 		return requestId;
 	}
- */
+
 	/*
 	 * @dev Internal function to accept and add additionals to a request as Payer
 	 *
@@ -249,9 +244,9 @@ contract RequestBitcoinOffline is RequestCurrencyContractInterface {
   	 *
 	 * @return Validity of order signature.
 	 */	
-/* 	function checkRequestSignature(
+	function checkRequestSignature(
 		bytes 		_requestData,
-		string[] 	_payeesPaymentAddress,
+		bytes 		_payeesPaymentAddress,
 		uint256 	_expirationDate,
 		bytes 		_signature)
 		public
@@ -269,7 +264,7 @@ contract RequestBitcoinOffline is RequestCurrencyContractInterface {
 		// check signature of the hash with the creator address
 		return isValidSignature(extractAddress(_requestData, 0), hash, v, r, s);
 	}
- */
+
 	/*
 	 * @dev Function internal to calculate Keccak-256 hash of a request with specified parameters
 	 *
@@ -279,9 +274,9 @@ contract RequestBitcoinOffline is RequestCurrencyContractInterface {
 	 *
 	 * @return Keccak-256 hash of (this,_requestData, _payeesPaymentAddress, _expirationDate)
 	 */
-/* 	function getRequestHash(
+	function getRequestHash(
 		bytes 		_requestData,
-		string[] 	_payeesPaymentAddress,
+		bytes 		_payeesPaymentAddress,
 		uint256 	_expirationDate)
 		internal
 		view
@@ -289,7 +284,7 @@ contract RequestBitcoinOffline is RequestCurrencyContractInterface {
 	{
 		return keccak256(this,_requestData, _payeesPaymentAddress, _expirationDate);
 	}
- */
+
 	/*
 	 * @dev Verifies that a hash signature is valid. 0x style
 	 * @param signer address of signer.
