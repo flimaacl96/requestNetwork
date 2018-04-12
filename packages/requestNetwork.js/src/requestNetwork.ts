@@ -115,7 +115,7 @@ class RequestNetwork {
                 payees.map(payee => payee.idAddress),
                 payees.map(payee => payee.expectedAmount),
                 payer.refundAddress,
-                undefined, // TODO: _amountsToPay - amount paid with the creation
+                payees.map(payee => payee.amountToPayAtCreation),
                 undefined, // _additionals
                 undefined, // _data
                 undefined, // _extension
@@ -167,7 +167,7 @@ class RequestNetwork {
         return new RequestNetwork.SignedRequest(signedRequestData);
     }
 
-    broadcastSignedRequest(signedRequest: RequestNetwork.SignedRequest, payer: Payer): typeof Web3PromiEvent {
+    broadcastSignedRequest(signedRequest: RequestNetwork.SignedRequest, payer: Payer, amountsToPayAtBroadcast: Amount[]): typeof Web3PromiEvent {
         if (payer.refundAddress && payer.idAddress !== payer.refundAddress) {
             throw new Error('Different idAddress and paymentAddress for Payer of signed request not yet supported');
         }
@@ -185,7 +185,7 @@ class RequestNetwork {
         const promiEvent = Web3PromiEvent();
         let promise = requestEthereumService.broadcastSignedRequestAsPayer(
             signedRequest.signedRequestData,
-            [], // _amountsToPay
+            amountsToPayAtBroadcast,
             undefined, // _additionals
             { from: payer.idAddress }
         );
@@ -315,6 +315,7 @@ interface Payee {
     paymentAddress: string,
     expectedAmount: Amount | any,
     balance?: Amount | any,
+    amountToPayAtCreation?: Amount
 }
 
 interface Payer {
