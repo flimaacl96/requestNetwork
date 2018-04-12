@@ -4,7 +4,8 @@ import RequestCoreService from '../src/servicesCore/requestCore-service';
 import currencyContracts from './currencyContracts';
 import RequestEthereumService from './servicesContracts/requestEthereum-service';
 
-const BN = require('bn.js');
+const BigNumber = require('bn.js');
+
 const Web3PromiEvent = require('web3-core-promievent');
 
 // RequestCore service containing methods for interacting with the Request Core
@@ -215,7 +216,7 @@ namespace RequestNetwork {
             this.service =  serviceForCurrency(currency);
         }
 
-        pay(amountsToPay: number[] = [], additionals: number[] = []): typeof Web3PromiEvent {
+        pay(amountsToPay: Amount[] = [], additionals: Amount[] = []): typeof Web3PromiEvent {
             return promiEventLibraryWrap(this, () => 
                 this.service.paymentAction(
                     this.requestId,
@@ -231,7 +232,7 @@ namespace RequestNetwork {
             )
         }
 
-        public refund(amountToRefund: number) : typeof Web3PromiEvent {
+        public refund(amountToRefund: Amount) : typeof Web3PromiEvent {
             return promiEventLibraryWrap(this, () => 
                 this.service.refundAction(this.requestId, amountToRefund)
             )
@@ -312,8 +313,8 @@ namespace RequestNetwork {
 interface Payee {
     idAddress: string,
     paymentAddress: string,
-    expectedAmount: number | any,
-    balance?: number | any,
+    expectedAmount: Amount | any,
+    balance?: Amount | any,
 }
 
 interface Payer {
@@ -335,7 +336,7 @@ interface RequestData {
 interface SignedRequestData {
     currencyContract: string,
     data: string,
-    expectedAmounts: number[],
+    expectedAmounts: Amount[],
     expirationDate: number,
     extension: string,
     extensionParams: any[],
@@ -351,6 +352,7 @@ interface Event {
     name: string,
 }
 
+type Amount = number | string | typeof BigNumber;
 
 export default RequestNetwork;
 

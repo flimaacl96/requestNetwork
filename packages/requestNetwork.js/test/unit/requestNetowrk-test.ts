@@ -8,7 +8,7 @@ const should = chai.should()
 const expect = chai.expect;
 
 const web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:8545'));
-
+const BigNumber = require("bn.js");
 
 describe('Request Network API', () => {
     let accounts: Array<string>;
@@ -78,6 +78,22 @@ describe('Request Network API', () => {
 
         const data = await request.getData();
         expect(data.payee.balance.toNumber()).to.equal(1);
+    });
+
+    it('allows to pay an ETH request using string and bignumbers', async () => {
+        const { request } = await requestNetwork.createRequest(
+            RequestNetwork.Role.Payee,
+            RequestNetwork.Currency.Ethereum,
+            examplePayees,
+            examplePayer
+        )
+
+        await request.pay([1]);
+        await request.pay(['10']);
+        await request.pay([new BigNumber(100)]);
+
+        const data = await request.getData();
+        expect(data.payee.balance.toNumber()).to.equal(111);
     });
 
     it('allows to cancel an ETH request', async () => {
