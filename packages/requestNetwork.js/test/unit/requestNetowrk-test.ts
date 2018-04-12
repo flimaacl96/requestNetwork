@@ -66,6 +66,21 @@ describe('Request Network API', () => {
         expect(request.currency).to.equal(RequestNetwork.Currency.Ethereum);
     });
 
+    it('creates a ETH request with data', async () => {
+        const role = RequestNetwork.Role.Payer;
+        const initialData = { message: 'Hello, human, I come in peace' };
+        const { request } = await requestNetwork.createRequest(
+            role,
+            RequestNetwork.Currency.Ethereum,
+            examplePayees,
+            examplePayer,
+            { data: initialData }
+        )
+        
+        const requestData = await request.getData();
+        expect(requestData.data.data).to.deep.equal(initialData);
+    });
+
     it('allows to pay an ETH request', async () => {
         const { request } = await requestNetwork.createRequest(
             RequestNetwork.Role.Payee,

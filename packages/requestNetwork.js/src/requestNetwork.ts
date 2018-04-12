@@ -90,7 +90,8 @@ class RequestNetwork {
         as: RequestNetwork.Role,
         currency: RequestNetwork.Currency,
         payees: Payee[],
-        payer: Payer
+        payer: Payer,
+        requestOptions: RequestCreationOptions = {}
     ): typeof Web3PromiEvent {
         if (currency !== RequestNetwork.Currency.Ethereum) {
             throw new Error('Currency not implemented');
@@ -107,6 +108,10 @@ class RequestNetwork {
                 payer.idAddress,
                 payees.map(payee => payee.paymentAddress),
                 payer.refundAddress,
+                requestOptions.data && JSON.stringify(requestOptions.data),
+                undefined, // _extension,
+                undefined, // _extensionParams,
+                requestOptions.transactionOptions, // _options,
             );
         }
 
@@ -117,10 +122,10 @@ class RequestNetwork {
                 payer.refundAddress,
                 payees.map(payee => payee.amountToPayAtCreation),
                 undefined, // _additionals
-                undefined, // _data
+                requestOptions.data && JSON.stringify(requestOptions.data),
                 undefined, // _extension
                 undefined, // _extensionParams
-                { from: payer.idAddress }
+                Object.assign({}, requestOptions.transactionOptions, { from: payer.idAddress })
             );
         }
 
@@ -146,7 +151,8 @@ class RequestNetwork {
         as: RequestNetwork.Role,
         currency: RequestNetwork.Currency,
         payees: Payee[],
-        expirationDate: number
+        expirationDate: number,
+        requestOptions: RequestCreationOptions = {}
     ): Promise<RequestNetwork.SignedRequest> {
         if (currency !== RequestNetwork.Currency.Ethereum) {
             throw new Error('Currency not implemented');
@@ -161,13 +167,22 @@ class RequestNetwork {
             payees.map(payee => payee.idAddress),
             payees.map(payee => payee.expectedAmount),
             expirationDate,
-            payees.map(payee => payee.paymentAddress)
+            payees.map(payee => payee.paymentAddress),
+            requestOptions.data && JSON.stringify(requestOptions.data),
+            undefined, // _extension,
+            undefined, // _extensionParams,
+            requestOptions.transactionOptions && requestOptions.transactionOptions.from,
         );
 
         return new RequestNetwork.SignedRequest(signedRequestData);
     }
 
-    broadcastSignedRequest(signedRequest: RequestNetwork.SignedRequest, payer: Payer, amountsToPayAtBroadcast: Amount[]): typeof Web3PromiEvent {
+    broadcastSignedRequest(
+        signedRequest: RequestNetwork.SignedRequest,
+        payer: Payer,
+        amountsToPayAtBroadcast: Amount[] = [],
+        requestOptions: RequestCreationOptions = {}
+    ): typeof Web3PromiEvent {
         if (payer.refundAddress && payer.idAddress !== payer.refundAddress) {
             throw new Error('Different idAddress and paymentAddress for Payer of signed request not yet supported');
         }
@@ -187,7 +202,7 @@ class RequestNetwork {
             signedRequest.signedRequestData,
             amountsToPayAtBroadcast,
             undefined, // _additionals
-            { from: payer.idAddress }
+            Object.assign({ from: payer.idAddress }, requestOptions.transactionOptions)
         );
 
         promise.then(({ request, transaction } : { request: any, transaction: object }) => {
@@ -216,25 +231,42 @@ namespace RequestNetwork {
             this.service =  serviceForCurrency(currency);
         }
 
-        pay(amountsToPay: Amount[] = [], additionals: Amount[] = []): typeof Web3PromiEvent {
+        pay(
+            amountsToPay: Amount[] = [],
+            additionals: Amount[] = [],
+            transactionOptions: TransactionOptions = {}
+        ): typeof Web3PromiEvent {
             return promiEventLibraryWrap(this, () => 
                 this.service.paymentAction(
                     this.requestId,
                     amountsToPay,
-                    additionals
+                    additionals,
+                    transactionOptions
                 )
             )
         }
-
-        public cancel() : typeof Web3PromiEvent {
+        
+        public cancel(
+            transactionOptions: TransactionOptions = {}
+        ) : typeof Web3PromiEvent {
             return promiEventLibraryWrap(this, () => 
-                this.service.cancel(this.requestId)
+            this.service.cancel(
+                    this.requestId,
+                    transactionOptions
+                )
             )
         }
-
-        public refund(amountToRefund: Amount) : typeof Web3PromiEvent {
+        
+        public refund(
+            amountToRefund: Amount,
+            transactionOptions: TransactionOptions = {}
+        ) : typeof Web3PromiEvent {
             return promiEventLibraryWrap(this, () => 
-                this.service.refundAction(this.requestId, amountToRefund)
+            this.service.refundAction(
+                    this.requestId,
+                    amountToRefund,
+                    transactionOptions
+                )
             )
         }
 
@@ -326,7 +358,7 @@ interface Payer {
 interface RequestData {
     creator: RequestNetwork.Role,
     currencyContract: object,
-    data: any,
+    data: object,
     payee: Payee,
     payer: Payer,
     requestId: string,
@@ -351,6 +383,20 @@ interface Event {
     _meta: { blockNumber: number, logIndex: number, timestamp: number },
     data: any,
     name: string,
+}
+
+interface TransactionOptions {
+    value?: Amount
+    gas?: Amount
+    gasPrice?: Amount
+    numberOfConfirmation?: number
+    from?: string
+}
+
+interface RequestCreationOptions {
+    data?: object,
+    extensions?: object,
+    transactionOptions?: TransactionOptions
 }
 
 type Amount = number | string | typeof BigNumber;
