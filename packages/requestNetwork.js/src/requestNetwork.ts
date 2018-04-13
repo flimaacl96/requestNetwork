@@ -54,9 +54,9 @@ export default class RequestNetwork {
         BitcoinService.init(bitcoinNetworkId);
 
         // init interface services
-        this.requestCoreService = new RequestCoreService();
-        this.requestEthereumService = new RequestEthereumService();
-        this.requestERC20Service = new RequestERC20Service();
-        this.requestBitcoinOfflineService = new RequestBitcoinOfflineService();
+        this.requestCoreService = RequestCoreService.getInstance();
+        this.requestEthereumService = RequestEthereumService.getInstance();
+        this.requestERC20Service = RequestERC20Service.getInstance();
+        this.requestBitcoinOfflineService = RequestBitcoinOfflineService.getInstance();
     }
 }

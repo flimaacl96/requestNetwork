@@ -28,6 +28,21 @@ const DEFAULT_GAS_ERC20_REFUNDACTION = '100000';
  * The RequestERC20Service class is the interface for the Request Ethereum currency contract
  */
 export default class RequestERC20Service {
+    /**
+     * get the instance of RequestERC20Service
+     * @return  The instance of the RequestERC20Service class.
+     */
+    public static getInstance() {
+        if (!RequestERC20Service._instance) {
+            RequestERC20Service._instance = new this();
+        }
+        return RequestERC20Service._instance;
+    }
+
+    private static _instance: RequestERC20Service;
+
+    public web3Single: Web3Single;
+
     protected ipfs: any;
 
     // RequestCore on blockchain
@@ -40,17 +55,15 @@ export default class RequestERC20Service {
      */
     protected requestCoreServices: any;
 
-    private web3Single: Web3Single;
-
     /**
      * constructor to Instantiates a new RequestERC20Service
      */
-    constructor() {
+    private constructor() {
         this.web3Single = Web3Single.getInstance();
         this.ipfs = Ipfs.getInstance();
 
         this.abiRequestCoreLast = this.web3Single.getContractInstance('last-RequestCore').abi;
-        this.requestCoreServices = new RequestCoreService();
+        this.requestCoreServices = RequestCoreService.getInstance();
     }
 
     /**

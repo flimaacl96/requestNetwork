@@ -27,6 +27,22 @@ const EMPTY_BYTES_20 = '0x0000000000000000000000000000000000000000';
  * The RequestBitcoinOfflineService class is the interface for the Request Bitcoin currency contract with only offchain check
  */
 export default class RequestBitcoinOfflineService {
+    /**
+     * get the instance of RequestBitcoinOfflineService
+     * @return  The instance of the RequestBitcoinOfflineService class.
+     */
+    public static getInstance() {
+        if (!RequestBitcoinOfflineService._instance) {
+            RequestBitcoinOfflineService._instance = new this();
+        }
+        return RequestBitcoinOfflineService._instance;
+    }
+
+    private static _instance: RequestBitcoinOfflineService;
+
+    public bitcoinService: BitcoinService;
+    public web3Single: Web3Single;
+
     protected ipfs: any;
 
     // RequestCore on blockchain
@@ -53,20 +69,16 @@ export default class RequestBitcoinOfflineService {
      */
     protected instanceRequestBitcoinOfflineLast: any;
 
-    private bitcoinService: BitcoinService;
-
-    private web3Single: Web3Single;
-
     /**
      * constructor to Instantiates a new RequestBitcoinOfflineService
      */
-    constructor() {
+    private constructor() {
         this.bitcoinService = BitcoinService.getInstance();
         this.web3Single = Web3Single.getInstance();
         this.ipfs = Ipfs.getInstance();
 
         this.abiRequestCoreLast = this.web3Single.getContractInstance('last-RequestCore').abi;
-        this.requestCoreServices = new RequestCoreService();
+        this.requestCoreServices = RequestCoreService.getInstance();
 
         const requestBitcoinOfflineLastArtifact = this.web3Single.getContractInstance('last-RequestBitcoinOffline');
         if (!requestBitcoinOfflineLastArtifact) {
@@ -119,8 +131,8 @@ export default class RequestBitcoinOfflineService {
             if (!this.web3Single.isArrayOfAddressesNoChecksum(_payeesIdAddress)) {
                 return promiEvent.reject(Error('_payeesIdAddress must be valid eth addresses'));
             }
-            if (!this.isArrayOfBitcoinAddresses(_payeesPaymentAddress)) {
-                return promiEvent.reject(Error('_payeesPaymentAddress must be valid eth addresses'));
+            if (!this.bitcoinService.isArrayOfBitcoinAddresses(_payeesPaymentAddress)) {
+                return promiEvent.reject(Error('_payeesPaymentAddress must be valid bitcoin addresses'));
             }
 
             if ( !this.web3Single.areSameAddressesNoChecksum(account, _payeesIdAddress[0]) ) {
@@ -134,8 +146,8 @@ export default class RequestBitcoinOfflineService {
             if (!this.web3Single.isAddressNoChecksum(_payer)) {
                 return promiEvent.reject(Error('_payer must be a valid eth address'));
             }
-            if (!this.isArrayOfBitcoinAddresses(_payerRefundAddress)) {
-                return promiEvent.reject(Error('_payerRefundAddress must be valid eth addresses'));
+            if (!this.bitcoinService.isArrayOfBitcoinAddresses(_payerRefundAddress)) {
+                return promiEvent.reject(Error('_payerRefundAddress must be valid bitcoin addresses'));
             }
 
             if (_extension) {
@@ -760,7 +772,6 @@ export default class RequestBitcoinOfflineService {
 
                 // get all payement on the payees addresses
                 const dataPayments = await this.bitcoinService.getMultiAddress(allPayees);
-
                 const balance: any = {};
                 for (const tx of dataPayments.txs) {
                     for (const o of tx.out) {
@@ -775,9 +786,8 @@ export default class RequestBitcoinOfflineService {
 
                 // get all refund on the payees refund addresses
                 const dataRefunds = await this.bitcoinService.getMultiAddress(allPayeesRefund);
-
                 const balanceRefund: any = {};
-                for (const tx of dataPayments.txs) {
+                for (const tx of dataRefunds.txs) {
                     for (const o of tx.out) {
                         if (allPayeesRefund.indexOf(o.addr) !== -1) {
                             if (!balanceRefund[o.addr]) {
@@ -950,7 +960,7 @@ export default class RequestBitcoinOfflineService {
             const dataRefunds = await this.bitcoinService.getMultiAddress(allPayeesRefund);
 
             const eventPayments: any[] = [];
-            for (const tx of dataPayments.txs) {
+            for (const tx of dataRefunds.txs) {
                 for (const o of tx.out) {
                     if (allPayees.indexOf(o.addr) !== -1) {
                         eventPayments.push({ _meta: { hash: tx.hash, blockNumber: tx.block_height, timestamp: tx.time},
@@ -1102,26 +1112,6 @@ export default class RequestBitcoinOfflineService {
 
         return this.web3Single.web3.utils.bytesToHex(ETH_ABI.soliditySHA3(types, values));
     }*/
-
-    /**
-     * Check if an bitcoin address is valid
-     * @param    _address   address to check
-     * @return   true if address is valid
-     */
-    public isBitcoinAddress(_address: string): boolean {
-        if (!_address) return false;
-        return walletAddressValidator.validate(_address, 'bitcoin', 'both');
-    }
-
-    /**
-     * Check if an array contains only bitcoin addresses valid
-     * @param    _array   array to check
-     * @return   true if array contains only bitcoin addresses valid
-     */
-    public isArrayOfBitcoinAddresses(_array: string[]): boolean {
-        if (!_array) return false;
-        return _array.filter((addr) => !this.isBitcoinAddress(addr)).length === 0;
-    }
 
     /**
      * create a bytes request

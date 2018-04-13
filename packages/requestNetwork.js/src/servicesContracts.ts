@@ -18,11 +18,11 @@ export const getServiceFromAddress = (_networkName: string, _address: string): a
 
     switch (artifact.contractName) {
         case 'RequestERC20':
-            return new RequestERC20Service();
+            return RequestERC20Service.getInstance();
         case 'RequestEthereum':
-            return new RequestEthereumService();
+            return RequestEthereumService.getInstance();
         case 'RequestBitcoinOffline':
-            return new RequestBitcoinOfflineService();
+            return RequestBitcoinOfflineService.getInstance();
         default:
             return;
     }

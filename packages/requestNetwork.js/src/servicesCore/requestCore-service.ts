@@ -17,8 +17,21 @@ const EMPTY_BYTES_20 = '0x0000000000000000000000000000000000000000';
  * The RequestCoreService class is the interface for the Request Core contract
  */
 export default class RequestCoreService {
-    protected web3Single: Web3Single;
-    protected ipfs: any;
+    /**
+     * get the instance of RequestCoreService
+     * @return  The instance of the RequestCoreService class.
+     */
+    public static getInstance() {
+        if (!RequestCoreService._instance) {
+            RequestCoreService._instance = new this();
+        }
+        return RequestCoreService._instance;
+    }
+
+    private static _instance: RequestCoreService;
+
+    public web3Single: Web3Single;
+    public ipfs: any;
 
     // RequestCore on blockchain
     /**
@@ -37,7 +50,7 @@ export default class RequestCoreService {
     /**
      * constructor to Instantiates a new RequestCoreService
      */
-    constructor() {
+    private constructor() {
         this.web3Single = Web3Single.getInstance();
         this.ipfs = Ipfs.getInstance();
 
